@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>哥哥我是小猫的状态</title>
-<!-- Our Home v3.30.2 -->
+<!-- Our Home v3.30.3 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -126,6 +126,15 @@
   .cloud::after { width:38px; height:38px; top:-12px; right:42px; }
   .cloud-title { font-family:var(--font-en); font-size:24px; font-weight:600; color:var(--text); letter-spacing:1px; }
   .cloud-sub { font-family:var(--font-zh); font-size:13px; color:var(--text-sub); margin-top:2px; display:flex; justify-content:center; align-items:center; gap:3px; height:22px; }
+  /* v3.30.3：常驻空间邀请码，杜绝“空间串台”导致的数据不同步 */
+  .space-chip { display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:3px 10px; border-radius:999px; background:rgba(212,154,171,0.16); border:1px solid rgba(212,154,171,0.45); font-family:var(--font-zh); font-size:12px; color:#b06a82; cursor:pointer; transition:background .2s; user-select:none; }
+  .space-chip:hover { background:rgba(212,154,171,0.28); }
+  .space-chip .sc-code { font-family:var(--font-en); font-weight:600; letter-spacing:1px; }
+  .space-chip .sc-switch { margin-left:4px; padding-left:7px; border-left:1px solid rgba(176,106,130,0.4); color:#8a6a76; font-size:11px; }
+  .space-chip .sc-switch:hover { color:#b06a82; }
+  /* 云端同步成功提示 */
+  .cloud-toast { position:fixed; left:50%; bottom:84px; transform:translateX(-50%) translateY(20px); background:rgba(93,138,168,0.95); color:#fff; font-family:var(--font-zh); font-size:13px; padding:9px 18px; border-radius:999px; box-shadow:0 6px 20px rgba(93,138,168,0.4); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:9999; }
+  .cloud-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
   .main {
     flex:1; margin-top:var(--top-h); margin-bottom:var(--nav-h);
@@ -137,6 +146,10 @@
   @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 
   .page-header { margin-bottom:24px; }
+  /* v3.30.3：客厅页头——副标题靠左、空间码靠右，对齐留言框右边缘 */
+  .living-header { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+  .living-header .ph-left { min-width:0; }
+  .living-header .space-chip { margin-top:0; }
   .page-title { font-family:var(--font-zh); font-size:clamp(24px,5vw,32px); font-weight:600; display:flex; align-items:center; gap:10px; }
   .page-title-icon { width:40px; height:40px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:18px; font-family:var(--font-zh); background:rgba(255,255,255,0.7); box-shadow:var(--shadow); }
   .page-subtitle { font-family:var(--font-zh); font-size:13px; color:var(--text-sub); margin-top:4px; margin-left:50px; }
@@ -1356,6 +1369,8 @@ const Cloud=(function(){
     return{spaceId:spaceId};
   }
   async function ensureMember(r){ if(!spaceId)return; let {error}=await sb.from('space_members').insert({space_id:spaceId,user_id:userId,role:r}); if(error){ if(error.code==='23505'){ const {error:e2}=await sb.from('space_members').update({role:r}).eq('space_id',spaceId).eq('user_id',userId); if(e2)console.error('Cloud ensureMember 更新角色失败:',e2.message); } else { console.error('Cloud ensureMember 失败:',error.message); } } }
+  // v3.30.3：读取当前空间邀请码，用于在界面常驻展示，避免“空间串台”
+  async function getSpaceCode(){ if(!spaceId) return null; const {data,error}=await sb.from('spaces').select('code').eq('id',spaceId).single(); if(error){ return null; } return data? data.code : null; }
   async function loadAll(){
     if(!spaceId)return{};
     const [m,c,msg,ach,ann,wsh,mst,grd,gm,med,cr]=await Promise.all([
@@ -1376,12 +1391,12 @@ const Cloud=(function(){
   async function saveMood(date,r,mk){ if(!ready||!spaceId)return; const {error}=await sb.from('moods').upsert({space_id:spaceId,date:date,role:r,mood_key:mk},{onConflict:'space_id,date,role'}); if(error)console.error('Cloud saveMood 失败:',error.message); }
   async function addCapsule(cap){ if(!ready||!spaceId)return null; const {data,error}=await sb.from('capsules').insert({space_id:spaceId,title:cap.title||'',content:cap.text,role:cap.role,open_at:cap.openDate?cap.openDate+'T00:00:00+00:00':null,opened:false}).select().single(); if(error){console.error('Cloud addCapsule 失败:',error.message);return null;} return data; }
   async function openCapsule(id){ if(!ready||!spaceId)return; await sb.from('capsules').update({opened:true}).eq('space_id',spaceId).eq('id',id); }
-  async function addMessage(m){ if(!ready||!spaceId)return; const {error}=await sb.from('messages').insert({space_id:spaceId,role:m.role,content:m.text}); if(error)console.error('Cloud addMessage 失败:',error.message); }
-  async function wishSave(w){ if(!ready||!spaceId)return; const {error}=await sb.from('wishes').upsert({space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},{onConflict:'space_id,id'}); if(error)console.error('Cloud wishSave 失败:',error.message); }
-  async function mistakeSave(m){ if(!ready||!spaceId)return; const {error}=await sb.from('mistakes').upsert({space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},{onConflict:'space_id,id'}); if(error)console.error('Cloud mistakeSave 失败:',error.message); }
-  async function grudgeSave(g){ if(!ready||!spaceId)return; const {error}=await sb.from('grudges').upsert({space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},{onConflict:'space_id,id'}); if(error)console.error('Cloud grudgeSave 失败:',error.message); }
-  async function gameSave(g){ if(!ready||!spaceId)return; const {error}=await sb.from('game_scores').upsert({space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},{onConflict:'space_id,id'}); if(error)console.error('Cloud gameSave 失败:',error.message); }
-  async function anniAdd(a){ if(!ready||!spaceId)return; const {error}=await sb.from('anniversaries').upsert({space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},{onConflict:'space_id,id'}); if(error)console.error('Cloud anniAdd 失败:',error.message); }
+  async function addMessage(m){ if(!ready||!spaceId)return false; const {error}=await sb.from('messages').insert({space_id:spaceId,role:m.role,content:m.text}); if(error){console.error('Cloud addMessage 失败:',error.message); return false;} return true; }
+  async function wishSave(w){ if(!ready||!spaceId)return false; const {error}=await sb.from('wishes').upsert({space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},{onConflict:'space_id,id'}); if(error){console.error('Cloud wishSave 失败:',error.message);return false;} return true; }
+  async function mistakeSave(m){ if(!ready||!spaceId)return false; const {error}=await sb.from('mistakes').upsert({space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},{onConflict:'space_id,id'}); if(error){console.error('Cloud mistakeSave 失败:',error.message);return false;} return true; }
+  async function grudgeSave(g){ if(!ready||!spaceId)return false; const {error}=await sb.from('grudges').upsert({space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},{onConflict:'space_id,id'}); if(error){console.error('Cloud grudgeSave 失败:',error.message);return false;} return true; }
+  async function gameSave(g){ if(!ready||!spaceId)return false; const {error}=await sb.from('game_scores').upsert({space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},{onConflict:'space_id,id'}); if(error){console.error('Cloud gameSave 失败:',error.message);return false;} return true; }
+  async function anniAdd(a){ if(!ready||!spaceId)return false; const {error}=await sb.from('anniversaries').upsert({space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},{onConflict:'space_id,id'}); if(error){console.error('Cloud anniAdd 失败:',error.message);return false;} return true; }
   async function anniDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
   async function mediaSave(item,kind){ if(!ready||!spaceId)return; const {error}=await sb.from('media').upsert({space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:item.publisher||null,country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},{onConflict:'space_id,id'}); if(error)console.error('Cloud mediaSave 失败:',error.message); }
   async function mediaDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
@@ -1412,7 +1427,7 @@ const Cloud=(function(){
   }
   if(document.readyState!=='loading'){ init(); } else { document.addEventListener('DOMContentLoaded', init); }
   window.addEventListener('beforeunload',function(){ if(ready) setPresence(false); });
-  return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,wishSave:wishSave,mistakeSave:mistakeSave,grudgeSave:grudgeSave,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,
+  return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,wishSave:wishSave,mistakeSave:mistakeSave,grudgeSave:grudgeSave,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,getSpaceCode:getSpaceCode,
     get spaceId(){return spaceId;},get role(){return role;},get ready(){return ready;}};
 })();
 window.Cloud=Cloud;
@@ -1438,6 +1453,7 @@ window.spaceCreate=async function(){
   if(!window.Cloud||!Cloud.ready){document.getElementById('spaceMsg').textContent='正在连接云端…';return;}
   const r=await Cloud.createSpace();
   if(r.error){document.getElementById('spaceMsg').textContent='创建失败：'+r.error;return;}
+  try{ localStorage.setItem('oh_space_code', r.code); }catch(e){}
   document.getElementById('spaceCode').textContent=r.code;
   document.getElementById('spaceCodeBox').style.display='block';
 };
@@ -1451,8 +1467,16 @@ window.spaceJoin=async function(){
   if(!code){document.getElementById('spaceMsg').textContent='请输入邀请码';return;}
   const r=await Cloud.joinSpace(code);
   if(r.error){document.getElementById('spaceMsg').textContent=r.error;return;}
+  try{ localStorage.setItem('oh_space_code', code.toUpperCase()); }catch(e){}
   document.getElementById('spaceModal').style.display='none';
   document.getElementById('onlineModal').style.display='flex';
+};
+// v3.30.3：切换空间——清掉本地空间记录后重新打开空间弹窗（解决“空间串台”）
+window.switchSpace=function(){
+  try{ localStorage.removeItem('oh_space_id'); localStorage.removeItem('oh_space_code'); }catch(e){}
+  document.getElementById('onlineModal').style.display='none';
+  document.getElementById('spaceChip').style.display='none';
+  document.getElementById('spaceModal').style.display='flex';
 };
 </script>
 
@@ -1533,6 +1557,7 @@ window.spaceJoin=async function(){
       <div class="cloud-sub" id="onlineBadge"><span id="onlineDot"></span></div>
     </div>
   </header>
+  <div class="cloud-toast" id="cloudToast"></div>
 
   <main class="main" id="mainContent">
 
@@ -1697,9 +1722,15 @@ window.spaceJoin=async function(){
 
     <!-- 客厅 -->
     <div class="page active" id="page-living">
-      <div class="page-header">
-        <div class="page-title"><span class="page-title-icon" data-icon="厅">厅</span>客厅</div>
-        <div class="page-subtitle">家里的留言板，说点想说的话</div>
+      <div class="page-header living-header">
+        <div class="ph-left">
+          <div class="page-title"><span class="page-title-icon" data-icon="厅">厅</span>客厅</div>
+          <div class="page-subtitle">家里的留言板，说点想说的话</div>
+        </div>
+        <div class="space-chip" id="spaceChip" style="display:none;" title="点击复制邀请码">
+          <span>空间码 <span class="sc-code" id="spaceCodeText">------</span></span>
+          <span class="sc-switch" id="spaceSwitchBtn">切换</span>
+        </div>
       </div>
       <div class="msg-board">
         <div class="msg-form">
@@ -2167,6 +2198,31 @@ window.spaceJoin=async function(){
     });
   }
 
+  // v3.30.3：常驻空间邀请码 chip + 云端同步提示
+  function showCloudToast(msg){
+    const t=document.getElementById('cloudToast'); if(!t) return;
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(window.__cloudToastT);
+    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  function setupSpaceChip(){
+    const chip=document.getElementById('spaceChip');
+    const txt=document.getElementById('spaceCodeText');
+    const sw=document.getElementById('spaceSwitchBtn');
+    if(!chip||!txt) return;
+    const fill=function(c){ if(!c) return; txt.textContent=c; chip.style.display='inline-flex'; try{ localStorage.setItem('oh_space_code', c); }catch(e){} };
+    let code=null; try{ code=localStorage.getItem('oh_space_code'); }catch(e){}
+    if(code){ fill(code); }
+    else if(window.Cloud && Cloud.ready && Cloud.spaceId){ Cloud.getSpaceCode().then(function(c){ if(c) fill(c); }); }
+    chip.onclick=function(e){
+      if(e.target===sw) return;
+      const c=txt.textContent;
+      if(c&&c!=='------' && navigator.clipboard){ navigator.clipboard.writeText(c).then(function(){ showCloudToast('邀请码 '+c+' 已复制'); }, function(){ showCloudToast('邀请码：'+c); }); }
+      else if(c&&c!=='------'){ showCloudToast('邀请码：'+c); }
+    };
+    if(sw) sw.onclick=function(e){ e.stopPropagation(); if(window.switchSpace) window.switchSpace(); };
+  }
+
   // ONLINE STATUS
   window.selectOnline = function(role) {
     onlineRole = role;
@@ -2194,6 +2250,7 @@ window.spaceJoin=async function(){
     if(window.Cloud){
       Cloud.ensureMember(role);
       Cloud.setPresence(true);
+      setupSpaceChip();
       Cloud.loadAll().then(function(d){
         try{
           (d.moods||[]).forEach(function(m){ if(!moodData[m.date]) moodData[m.date]={}; moodData[m.date][m.role]=m.mood_key; });
@@ -2907,10 +2964,10 @@ window.spaceJoin=async function(){
     const text = document.getElementById('msgTextarea').value.trim();
     if(!text) return;
     messages.unshift({role:onlineRole, text:text, time:new Date().toISOString(), date:todayKey()});
-    if(window.Cloud) Cloud.addMessage({role:onlineRole, text:text});
-    document.getElementById('msgTextarea').value='';
     renderMessages();
+    document.getElementById('msgTextarea').value='';
     checkAchieveRedDot();
+    if(window.Cloud){ Cloud.addMessage({role:onlineRole, text:text}).then(function(ok){ if(ok) showCloudToast('已同步到云端 ✔'); }); }
   });
 
   // NOTEBOOKS
@@ -6116,12 +6173,12 @@ const ACHIEVEMENTS = [
     if(!title || !date) return;
     const item={id:genId(), title, date, type};
     anniversaries.push(item);
-    if(window.Cloud) Cloud.anniAdd(item);
+    renderAnniversaries();
     document.getElementById('anniTitleInp').value='';
     document.getElementById('anniDateInp').value='';
     anniModal.classList.remove('show');
-    renderAnniversaries();
     checkAchieveRedDot();
+    if(window.Cloud){ Cloud.anniAdd(item).then(function(ok){ if(ok) showCloudToast('已同步到云端 ✔'); }); }
   };
   window.deleteAnniversary = function(idx) {
     const item = anniversaries[idx];
