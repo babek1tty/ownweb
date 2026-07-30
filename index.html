@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Our Home - 3.22.3</title>
+<title>哥哥我是小猫的状态</title>
+<!-- Our Home v3.30.2 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -338,6 +339,11 @@
     display:flex; align-items:center; justify-content:center;
     font-family:var(--font-zh); font-size:14px; font-weight:600;
     cursor:pointer; border:none;
+  }
+  /* 桌面端（有鼠标悬停能力）：悬停即显示编辑/删除按钮并滑出卡片 */
+  @media (hover:hover) {
+    .film-swipe-wrap:hover .film-card { transform:translateX(-144px); }
+    .film-swipe-wrap:hover .film-swipe-actions { opacity:1; }
   }
 
   /* 状态 pill 按钮（弹窗内） */
@@ -1318,6 +1324,138 @@
 
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://mmoqfecjbshtmhonoevw.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tb3FmZWNqYnNodG1ob25vZXZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzOTM2ODEsImV4cCI6MjEwMDk2OTY4MX0.fPinYtGpmkSRZbyiOI1J0fDBjFbTqe8ixjTTM4uEHaQ';
+const Cloud=(function(){
+  let sb=null,userId=null,spaceId=null,role=null,ready=false,presCh=null;
+  async function init(){
+    try{
+      sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      const {data,error}=await sb.auth.signInAnonymously();
+      if(error){console.error('Cloud 匿名登录失败',error);return false;}
+      userId=data.user.id;
+      spaceId=localStorage.getItem('oh_space_id');
+      role=localStorage.getItem('oh_role');
+      ready=true; return true;
+    }catch(e){console.error('Cloud init err',e);return false;}
+  }
+  function setIdentity(r){role=r;localStorage.setItem('oh_role',r);}
+  async function createSpace(){
+    const code=Math.random().toString(36).slice(2,8).toUpperCase();
+    const {data,error}=await sb.from('spaces').insert({code:code,name:'我们的家'}).select().single();
+    if(error){console.error('Cloud createSpace 失败:',error.message);return{error:error.message};}
+    spaceId=data.id;localStorage.setItem('oh_space_id',spaceId);
+    return{code:code,spaceId:spaceId};
+  }
+  async function joinSpace(code){
+    const {data,error}=await sb.from('spaces').select().eq('code',code.toUpperCase()).single();
+    if(error||!data){console.error('Cloud joinSpace 失败:',error?error.message:'邀请码无效');return{error:'邀请码无效'};}
+    spaceId=data.id;localStorage.setItem('oh_space_id',spaceId);
+    return{spaceId:spaceId};
+  }
+  async function ensureMember(r){ if(!spaceId)return; let {error}=await sb.from('space_members').insert({space_id:spaceId,user_id:userId,role:r}); if(error){ if(error.code==='23505'){ const {error:e2}=await sb.from('space_members').update({role:r}).eq('space_id',spaceId).eq('user_id',userId); if(e2)console.error('Cloud ensureMember 更新角色失败:',e2.message); } else { console.error('Cloud ensureMember 失败:',error.message); } } }
+  async function loadAll(){
+    if(!spaceId)return{};
+    const [m,c,msg,ach,ann,wsh,mst,grd,gm,med,cr]=await Promise.all([
+      sb.from('moods').select().eq('space_id',spaceId),
+      sb.from('capsules').select().eq('space_id',spaceId),
+      sb.from('messages').select().eq('space_id',spaceId).order('created_at',{ascending:false}),
+      sb.from('achievements').select().eq('space_id',spaceId),
+      sb.from('anniversaries').select().eq('space_id',spaceId),
+      sb.from('wishes').select().eq('space_id',spaceId),
+      sb.from('mistakes').select().eq('space_id',spaceId),
+      sb.from('grudges').select().eq('space_id',spaceId),
+      sb.from('game_scores').select().eq('space_id',spaceId),
+      sb.from('media').select().eq('space_id',spaceId),
+      sb.from('ctrl_records').select().eq('space_id',spaceId)
+    ]);
+    return{moods:m.data||[],caps:c.data||[],msgs:msg.data||[],ach:ach.data||[],anns:ann.data||[],wishes:wsh.data||[],mistakes:mst.data||[],grudges:grd.data||[],games:gm.data||[],media:med.data||[],ctrls:cr.data||[]};
+  }
+  async function saveMood(date,r,mk){ if(!ready||!spaceId)return; const {error}=await sb.from('moods').upsert({space_id:spaceId,date:date,role:r,mood_key:mk},{onConflict:'space_id,date,role'}); if(error)console.error('Cloud saveMood 失败:',error.message); }
+  async function addCapsule(cap){ if(!ready||!spaceId)return null; const {data,error}=await sb.from('capsules').insert({space_id:spaceId,title:cap.title||'',content:cap.text,role:cap.role,open_at:cap.openDate?cap.openDate+'T00:00:00+00:00':null,opened:false}).select().single(); if(error){console.error('Cloud addCapsule 失败:',error.message);return null;} return data; }
+  async function openCapsule(id){ if(!ready||!spaceId)return; await sb.from('capsules').update({opened:true}).eq('space_id',spaceId).eq('id',id); }
+  async function addMessage(m){ if(!ready||!spaceId)return; const {error}=await sb.from('messages').insert({space_id:spaceId,role:m.role,content:m.text}); if(error)console.error('Cloud addMessage 失败:',error.message); }
+  async function wishSave(w){ if(!ready||!spaceId)return; const {error}=await sb.from('wishes').upsert({space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},{onConflict:'space_id,id'}); if(error)console.error('Cloud wishSave 失败:',error.message); }
+  async function mistakeSave(m){ if(!ready||!spaceId)return; const {error}=await sb.from('mistakes').upsert({space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},{onConflict:'space_id,id'}); if(error)console.error('Cloud mistakeSave 失败:',error.message); }
+  async function grudgeSave(g){ if(!ready||!spaceId)return; const {error}=await sb.from('grudges').upsert({space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},{onConflict:'space_id,id'}); if(error)console.error('Cloud grudgeSave 失败:',error.message); }
+  async function gameSave(g){ if(!ready||!spaceId)return; const {error}=await sb.from('game_scores').upsert({space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},{onConflict:'space_id,id'}); if(error)console.error('Cloud gameSave 失败:',error.message); }
+  async function anniAdd(a){ if(!ready||!spaceId)return; const {error}=await sb.from('anniversaries').upsert({space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},{onConflict:'space_id,id'}); if(error)console.error('Cloud anniAdd 失败:',error.message); }
+  async function anniDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
+  async function mediaSave(item,kind){ if(!ready||!spaceId)return; const {error}=await sb.from('media').upsert({space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:item.publisher||null,country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},{onConflict:'space_id,id'}); if(error)console.error('Cloud mediaSave 失败:',error.message); }
+  async function mediaDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
+  async function ctrlSave(r){ if(!ready||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const {error}=await sb.from('ctrl_records').upsert({space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},{onConflict:'space_id,id'}); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
+  async function ctrlDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
+  async function syncFirstSeen(key,r){ if(!ready||!spaceId)return; const {error}=await sb.from('achievements').upsert({space_id:spaceId,key:String(key),unlocked_by:r,unlocked_at:new Date().toISOString()},{onConflict:'space_id,key'}); if(error)console.error('Cloud syncFirstSeen 失败:',error.message); }
+  // v3.30.2：把“已解锁成就的 id”也写入云端，使阈值类成就（看片/错题等）的达成状态可跨设备记忆，不再每次进入重复弹窗
+  async function syncAchievementUnlocked(id,r){ if(!ready||!spaceId)return; const {error}=await sb.from('achievements').upsert({space_id:spaceId,key:String(id),unlocked_by:r,unlocked_at:new Date().toISOString()},{onConflict:'space_id,key'}); if(error)console.error('Cloud syncAchievementUnlocked 失败:',error.message); }
+  async function setPresence(online){ if(!ready||!spaceId)return; const {error}=await sb.from('presence').upsert({space_id:spaceId,user_id:userId,role:role,online:online,last_seen:new Date().toISOString()},{onConflict:'space_id,user_id'}); if(error)console.error('Cloud setPresence 失败:',error.message); }
+  function subscribePresence(cb){ if(!ready||!spaceId)return; presCh=sb.channel('presence-'+spaceId).on('postgres_changes',{event:'*',schema:'public',table:'presence',filter:'space_id=eq.'+spaceId},cb).subscribe(); }
+  // 记录表实时订阅：任一设备增删改，本设备立即拉取该表最新数据并刷新对应界面
+  let recCh=null;
+  async function loadTable(name){
+    if(!ready||!spaceId) return null;
+    let q = sb.from(name).select().eq('space_id', spaceId);
+    if(name==='messages') q = q.order('created_at', {ascending:false});
+    const { data, error } = await q;
+    if(error){ console.error('Cloud loadTable 失败', name, error.message); return null; }
+    return data||[];
+  }
+  function subscribeRecords(cb){
+    if(!ready||!spaceId) return;
+    if(recCh){ try{ sb.removeChannel(recCh); }catch(e){} }
+    const tbls=['wishes','mistakes','grudges','game_scores','media','anniversaries','ctrl_records','moods','capsules','messages','achievements'];
+    recCh=sb.channel('records-'+spaceId);
+    tbls.forEach(function(t){ recCh=recCh.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'space_id=eq.'+spaceId},function(p){ try{ cb(t,p); }catch(e){ console.error('records 实时回调异常', e); } }); });
+    recCh.subscribe();
+  }
+  if(document.readyState!=='loading'){ init(); } else { document.addEventListener('DOMContentLoaded', init); }
+  window.addEventListener('beforeunload',function(){ if(ready) setPresence(false); });
+  return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,wishSave:wishSave,mistakeSave:mistakeSave,grudgeSave:grudgeSave,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,
+    get spaceId(){return spaceId;},get role(){return role;},get ready(){return ready;}};
+})();
+window.Cloud=Cloud;
+</script>
+<style>
+.space-modal{position:fixed;inset:0;background:rgba(247,238,233,0.98);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:var(--font-zh,sans-serif);}
+.space-card{background:#fffaf6;border-radius:24px;padding:34px 26px;width:84%;max-width:360px;box-shadow:0 20px 60px rgba(150,120,110,0.25);text-align:center;}
+.space-title{font-family:'Playfair Display SC',serif;font-size:26px;color:#7a5c4f;margin-bottom:8px;}
+.space-sub{font-size:13px;color:#9a8a80;margin-bottom:22px;line-height:1.6;}
+.space-btn{display:block;width:100%;padding:13px;border:none;border-radius:14px;font-size:15px;font-family:var(--font-zh,sans-serif);cursor:pointer;margin-top:12px;transition:transform .15s;}
+.space-btn.create{background:#e8d6e4;color:#b06a86;}
+.space-btn.join{background:#d4e0ed;color:#5d8aa8;}
+.space-btn:hover{transform:translateY(-2px);}
+.space-code-label{font-size:13px;color:#9a8a80;margin:14px 0 6px;}
+.space-code{font-size:30px;letter-spacing:6px;font-weight:700;color:#7a5c4f;background:#f5eef2;border-radius:12px;padding:10px;margin-bottom:6px;}
+.space-divider{margin:18px 0 4px;color:#c5b8b0;font-size:13px;}
+.space-input{width:100%;padding:12px;border:1px solid #e6d8d0;border-radius:12px;font-size:16px;text-align:center;letter-spacing:3px;text-transform:uppercase;margin-top:8px;box-sizing:border-box;}
+.space-msg{margin-top:12px;font-size:13px;color:#c06a6a;min-height:18px;}
+</style>
+
+<script>
+window.spaceCreate=async function(){
+  if(!window.Cloud||!Cloud.ready){document.getElementById('spaceMsg').textContent='正在连接云端…';return;}
+  const r=await Cloud.createSpace();
+  if(r.error){document.getElementById('spaceMsg').textContent='创建失败：'+r.error;return;}
+  document.getElementById('spaceCode').textContent=r.code;
+  document.getElementById('spaceCodeBox').style.display='block';
+};
+window.spaceToOnline=function(){
+  document.getElementById('spaceModal').style.display='none';
+  document.getElementById('onlineModal').style.display='flex';
+};
+window.spaceJoin=async function(){
+  if(!window.Cloud||!Cloud.ready){document.getElementById('spaceMsg').textContent='正在连接云端…';return;}
+  const code=document.getElementById('spaceCodeInput').value.trim();
+  if(!code){document.getElementById('spaceMsg').textContent='请输入邀请码';return;}
+  const r=await Cloud.joinSpace(code);
+  if(r.error){document.getElementById('spaceMsg').textContent=r.error;return;}
+  document.getElementById('spaceModal').style.display='none';
+  document.getElementById('onlineModal').style.display='flex';
+};
+</script>
+
 </head>
 <body>
 
@@ -1349,6 +1487,23 @@
     <div class="splash-dots">
       <div class="splash-dot"></div><div class="splash-dot"></div><div class="splash-dot"></div><div class="splash-dot"></div>
     </div>
+  </div>
+</div>
+
+<div class="space-modal" id="spaceModal" style="display:none;">
+  <div class="space-card">
+    <div class="space-title">我们的空间</div>
+    <div class="space-sub">创建一个只属于你们的空间，或输入伴侣的邀请码加入</div>
+    <button class="space-btn create" onclick="spaceCreate()">创建新空间</button>
+    <div id="spaceCodeBox" style="display:none;">
+      <div class="space-code-label">把邀请码发给 ta：</div>
+      <div class="space-code" id="spaceCode">------</div>
+      <button class="space-btn join" onclick="spaceToOnline()">进入</button>
+    </div>
+    <div class="space-divider">— 或 —</div>
+    <input class="space-input" id="spaceCodeInput" placeholder="输入邀请码" maxlength="8"/>
+    <button class="space-btn join" onclick="spaceJoin()">加入空间</button>
+    <div class="space-msg" id="spaceMsg"></div>
   </div>
 </div>
 
@@ -1928,7 +2083,7 @@
   let seenAchievements = new Set();
   let achieveInitialized = false; // v3.12：启动时静默标记已解锁，不弹庆祝弹窗
   // v3.12：首达成就追踪 & 隐藏成就独立计数器
-  let firstSeen = {};
+  let firstSeen = new Proxy({}, { set:function(t,p,v){ t[p]=v; if(v===true && window.Cloud && Cloud.ready){ Cloud.syncFirstSeen(String(p), Cloud.role); } return true; } });
   let ctrlPageOpenCount = 0;
   let babyStartGameCount = 0;
   let movies = [];
@@ -1940,14 +2095,12 @@
   let capsuleRole = null, wishRole = null, gameRole = null;
   let currentGame = null, currentLbGame = "2048", currentLbPeriod = "day";
   let gameInstance = null;
-  let anniversaries = [
-    { title:'我们在一起的日子', date:'2025-02-14', type:'anniversary' },
-    { title:'圣诞节', date:'2025-12-25', type:'christmas' }
-  ];
+  let anniversaries = [];
   let moodData = {};
   let calYear = 2026, calMonth = 7;
   let selectedMoodRole = null, selectedMoodKey = null, selectedCalDate = null;
   let msgRole = null;
+  function genId(){ try{ if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID(); }catch(e){} return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); }
 
   // 控制狂：在线计时
   let ctrlStartTime = null;
@@ -1965,13 +2118,59 @@
     setTimeout(()=>{
       document.getElementById('splash').style.display='none';
       // Show online selection after splash
-      document.getElementById('onlineModal').style.display='flex';
+      document.getElementById('splash').style.display='none';
+      (async()=>{
+        let t=0; while(!(window.Cloud && Cloud.ready) && t<60){ await new Promise(r=>setTimeout(r,100)); t++; }
+        if(window.Cloud && Cloud.ready && Cloud.spaceId){
+          document.getElementById('onlineModal').style.display='flex';
+        } else {
+          document.getElementById('spaceModal').style.display='flex';
+        }
+      })();
     },700);
   },3000);
+
+  function mapMedia(x){ return {id:x.id, title:x.title, year:x.year, genre:x.genre, note:x.note, poster:x.poster, cover:x.cover, director:x.director, cast:x.cast_crew, author:x.author, publisher:x.publisher, country:x.country, gege:x.gege||{status:null,rating:0}, baobao:x.baobao||{status:null,rating:0}, time:x.time}; }
+
+  // 实时回调：某表在云端发生变更后，拉取该表最新数据并刷新对应界面
+  function onRecordChange(table){
+    if(!window.Cloud) return;
+    Cloud.loadTable(table).then(function(rows){
+      if(!rows) return;
+      if(table==='wishes'){ wishes = rows.map(function(w){ return {id:w.id, role:w.role, text:w.text, time:w.time, fulfilled:w.fulfilled, fulfilledBy:w.fulfilled_by, fulfilledTime:w.fulfilled_time}; }); if(typeof renderWishes==='function') renderWishes(); }
+      else if(table==='mistakes'){ mistakes = rows.map(function(m){ return {id:m.id, text:m.text, time:m.time, replies:m.replies||[], tags:m.tags||[]}; }); if(typeof renderMistakes==='function') renderMistakes(); }
+      else if(table==='grudges'){ grudges = rows.map(function(g){ return {id:g.id, text:g.text, time:g.time, replies:g.replies||[], tags:g.tags||[]}; }); if(typeof renderGrudges==='function') renderGrudges(); }
+      else if(table==='game_scores'){ gameScores = rows.map(function(g){ return {game:g.game, role:g.role, score:g.score, time:g.time}; }); if(typeof renderLeaderboard==='function') renderLeaderboard(); }
+      else if(table==='media'){ movies = rows.filter(function(x){return x.kind==='movie';}).map(mapMedia); books = rows.filter(function(x){return x.kind==='book';}).map(mapMedia); if(typeof refreshFilmViews==='function') refreshFilmViews(filmType); }
+      else if(table==='anniversaries'){ anniversaries = rows.map(function(a){ return {id:a.id, title:a.title, date:a.date, type:a.type}; }); if(typeof renderAnniversaries==='function') renderAnniversaries(); }
+      else if(table==='ctrl_records'){
+        var cc = rows.map(function(r){ return {id:r.id, role:r.role, startTime:r.start_time, endTime:r.end_time, duration:r.duration, isOffline:r.is_offline}; });
+        cc.sort(function(a,b){ return (b.startTime||0)-(a.startTime||0); });
+        if(ctrlCurrentRecordId){ var cur = ctrlRecords.find(function(r){ return r.id===ctrlCurrentRecordId; }); cc = cc.filter(function(r){ return r.id!==ctrlCurrentRecordId; }); if(cur) cc.unshift(cur); }
+        ctrlRecords = cc; ctrlRenderRecords();
+      }
+      else if(table==='moods'){ moodData = {}; rows.forEach(function(m){ if(!moodData[m.date]) moodData[m.date]={}; moodData[m.date][m.role]=m.mood_key; }); if(typeof renderCalendar==='function') renderCalendar(); }
+      else if(table==='capsules'){ capsules = rows.map(function(c){ return {id:c.id, role:c.role, text:c.content, title:c.title||'', writeTime:'', openDate:(c.open_at||'').slice(0,10), opened:c.opened}; }); if(typeof renderCapsules==='function') renderCapsules(); }
+      else if(table==='messages'){ messages = rows.map(function(m){ return {role:m.role, text:m.content, time:m.created_at, date:''}; }); if(typeof renderMessages==='function') renderMessages(); }
+      else if(table==='achievements'){
+        rows.forEach(function(a){ firstSeen[a.key]=true; });
+        // v3.30.2：实时同步到的已获得成就也视为已看过，不弹陈旧弹窗
+        if(typeof ACHIEVEMENTS!=='undefined'){
+          if(!window.__achKeyMap){ window.__achKeyMap={}; ACHIEVEMENTS.forEach(function(x){ var m=(''+x.check).match(/firstSeen\['?([\w]+)'?\]/); if(m) window.__achKeyMap[m[1]]=x.id; }); }
+          rows.forEach(function(a){
+            ACHIEVEMENTS.forEach(function(x){ if(x.id===a.key) seenAchievements.add(x.id); });
+            if(window.__achKeyMap[a.key]) seenAchievements.add(window.__achKeyMap[a.key]);
+          });
+        }
+        if(typeof checkAchieveRedDot==='function') checkAchieveRedDot();
+      }
+    });
+  }
 
   // ONLINE STATUS
   window.selectOnline = function(role) {
     onlineRole = role;
+    if(window.Cloud) Cloud.setIdentity(role);
     const modal = document.getElementById('onlineModal');
     modal.classList.add('hidden');
     setTimeout(()=>{ modal.style.display='none'; }, 500);
@@ -1992,6 +2191,54 @@
     // v3.12：记录“以某身份首次进入首页/客厅”
     firstSeen['online_'+role] = true;
     firstSeen['living_'+role] = true;
+    if(window.Cloud){
+      Cloud.ensureMember(role);
+      Cloud.setPresence(true);
+      Cloud.loadAll().then(function(d){
+        try{
+          (d.moods||[]).forEach(function(m){ if(!moodData[m.date]) moodData[m.date]={}; moodData[m.date][m.role]=m.mood_key; });
+          capsules = (d.caps||[]).map(function(c){ return {id:c.id, role:c.role, text:c.content, title:c.title||'', writeTime:'', openDate:(c.open_at||'').slice(0,10), opened:c.opened}; });
+          messages = (d.msgs||[]).map(function(m){ return {role:m.role, text:m.content, time:m.created_at, date:''}; });
+          (d.ach||[]).forEach(function(a){ firstSeen[a.key]=true; });
+          // v3.30.2：云端已获得的成就（按成就 id 或 firstSeen key）视为已看过，建立“已获得”基线，避免每次进入重复弹陈旧弹窗
+          if(typeof ACHIEVEMENTS!=='undefined'){
+            if(!window.__achKeyMap){ window.__achKeyMap={}; ACHIEVEMENTS.forEach(function(x){ var m=(''+x.check).match(/firstSeen\['?([\w]+)'?\]/); if(m) window.__achKeyMap[m[1]]=x.id; }); }
+            (d.ach||[]).forEach(function(a){
+              ACHIEVEMENTS.forEach(function(x){ if(x.id===a.key) seenAchievements.add(x.id); });
+              if(window.__achKeyMap[a.key]) seenAchievements.add(window.__achKeyMap[a.key]);
+            });
+          }
+          achieveInitialized = true;
+          if(d.anns && d.anns.length) anniversaries = d.anns.map(function(a){ return {id:a.id, title:a.title, date:a.date, type:a.type}; });
+          if(d.wishes && d.wishes.length) wishes = d.wishes.map(function(w){ return {id:w.id, role:w.role, text:w.text, time:w.time, fulfilled:w.fulfilled, fulfilledBy:w.fulfilled_by, fulfilledTime:w.fulfilled_time}; });
+          if(d.mistakes && d.mistakes.length) mistakes = d.mistakes.map(function(m){ return {id:m.id, text:m.text, time:m.time, replies:m.replies||[], tags:m.tags||[]}; });
+          if(d.grudges && d.grudges.length) grudges = d.grudges.map(function(g){ return {id:g.id, text:g.text, time:g.time, replies:g.replies||[], tags:g.tags||[]}; });
+          if(d.games && d.games.length) gameScores = d.games.map(function(g){ return {game:g.game, role:g.role, score:g.score, time:g.time}; });
+          if(d.media && d.media.length){
+            movies = d.media.filter(function(x){return x.kind==='movie';}).map(mapMedia);
+            books = d.media.filter(function(x){return x.kind==='book';}).map(mapMedia);
+          }
+          if(d.ctrls && d.ctrls.length){
+            var cloudCtrls = d.ctrls.map(function(r){ return {id:r.id, role:r.role, startTime:r.start_time, endTime:r.end_time, duration:r.duration, isOffline:r.is_offline}; });
+            cloudCtrls.sort(function(a,b){ return (b.startTime||0) - (a.startTime||0); });
+            if(ctrlCurrentRecordId){
+              var cur = ctrlRecords.find(function(r){ return r.id===ctrlCurrentRecordId; });
+              cloudCtrls = cloudCtrls.filter(function(r){ return r.id!==ctrlCurrentRecordId; });
+              if(cur) cloudCtrls.unshift(cur);
+            }
+            ctrlRecords = cloudCtrls;
+          }
+          ctrlRenderRecords();
+          renderCalendar(); renderCapsules(); renderMessages(); if(typeof renderAnniversaries==='function') renderAnniversaries(); if(typeof refreshFilmViews==='function') refreshFilmViews(filmType); checkAchieveRedDot();
+        }catch(e){ console.error('Cloud load err', e); }
+      }).catch(function(){ achieveInitialized = true; });
+      Cloud.subscribePresence(function(payload){ var el=document.getElementById('partnerPresence'); if(el){} });
+      Cloud.subscribeRecords(onRecordChange);
+      // v3.30.2：兜底——云端异常/超时也允许弹窗，避免永不弹
+      setTimeout(function(){ achieveInitialized = true; }, 5000);
+    } else {
+      achieveInitialized = true; // 本地模式（无云端）：保持原即时弹窗行为
+    }
     checkAchieveRedDot();
   };
 
@@ -2031,8 +2278,16 @@
   }
 
   // 创建新一轮在线记录（选身份时调用）
+  // 将当前活跃会话定格并同步到云端（页面卸载/关闭时调用）
+  function ctrlPersistCurrent() {
+    if(!ctrlIsOnline || !ctrlCurrentRecordId || !window.Cloud || !Cloud.ready) return;
+    ctrlUpdateSession();
+    const record = ctrlRecords.find(function(r){ return r.id === ctrlCurrentRecordId; });
+    if(record) Cloud.ctrlSave(record);
+  }
+
   function ctrlStartSession() {
-    const id = Date.now();
+    const id = genId();
     const record = {
       id: id,
       role: onlineRole,
@@ -2043,6 +2298,7 @@
     };
     ctrlRecords.unshift(record);
     ctrlCurrentRecordId = id;
+    if(window.Cloud && Cloud.ready) Cloud.ctrlSave(record);
   }
 
   // 更新当前活跃记录（自动或手动刷新时调用）
@@ -2052,6 +2308,7 @@
     if(!record || record.isOffline) return;
     record.endTime = Date.now();
     record.duration = Date.now() - record.startTime;
+    if(window.Cloud && Cloud.ready) Cloud.ctrlSave(record);
   }
 
   // 闲置检测：监听用户交互，1分钟无交互则自动下线
@@ -2063,6 +2320,7 @@
         ctrlUpdateSession();
         const record = ctrlRecords.find(r=>r.id===ctrlCurrentRecordId);
         if(record) record.isOffline = true;
+        if(window.Cloud && Cloud.ready) Cloud.ctrlSave(record);
         ctrlIsOnline = false;
         ctrlStartTime = null;
         ctrlCurrentRecordId = null;
@@ -2136,6 +2394,9 @@
     }, 1000);
   }
   ctrlStartDisplayTimer();
+
+  // 页面卸载/关闭时定格当前在线会话并同步云端
+  window.addEventListener('beforeunload', function(){ ctrlPersistCurrent(); });
 
   // 渲染记录列表
   function ctrlRenderRecords() {
@@ -2397,7 +2658,7 @@
   };
   function findFilm(type,id){
     var arr = type==='movie'?movies:books;
-    return arr.find(function(x){ return x.id===id; });
+    return arr.find(function(x){ return String(x.id)===String(id); });
   }
   window.saveFilm = function(){
     var title=document.getElementById('filmTitleInp').value.trim();
@@ -2409,7 +2670,7 @@
     var rating = (status==='watched'||status==='both') ? filmRating : 0;
     var arr = filmType==='movie'?movies:books;
     if(editingFilmId){
-      var item = arr.find(function(x){ return x.id===editingFilmId; });
+      var item = arr.find(function(x){ return String(x.id)===String(editingFilmId); });
       if(!item) return;
       item.title = title || item.title;
       item.note = note;
@@ -2455,14 +2716,16 @@
       }
       arr.unshift(item);
     }
+    if(window.Cloud) Cloud.mediaSave(item, filmType);
     closeFilmModal();
     refreshFilmViews(filmType);
   };
   window.delFilm = function(id){
     [movies,books].forEach(function(arr){
-      var i=arr.findIndex(function(x){ return x.id===id; });
+      var i=arr.findIndex(function(x){ return String(x.id)===String(id); });
       if(i>-1) arr.splice(i,1);
     });
+    if(window.Cloud) Cloud.mediaDelete(id);
     refreshFilmViews(filmType);
   };
   window.filterFilmMain = function(type,val){
@@ -2471,8 +2734,12 @@
   };
   function countFilms(type,status,kw){
     var arr = type==='movie'?movies:books;
+    var q = (kw||'').toLowerCase().trim();
     return arr.filter(function(d){
-      if(kw && d.title.toLowerCase().indexOf(kw.toLowerCase())===-1) return false;
+      if(q){
+        var hay = ((d.title||'')+' '+(d.director||'')+' '+(d.author||'')+' '+(d.year||'')+' '+(d.cast||'')+' '+(d.genre||'')).toLowerCase();
+        if(hay.indexOf(q)===-1) return false;
+      }
       return getFilmCategory(d)===status;
     }).length;
   }
@@ -2515,14 +2782,18 @@
   }
   function renderFilmList(type,status){
     var arr = type==='movie'?movies:books;
-    var kw = (filmSearch[type+'-main']||'').toLowerCase();
+    var kw = filmSearch[type+'-main']||'';
+    var q = kw.toLowerCase().trim();
     var items = arr.filter(function(d){
-      if(kw && d.title.toLowerCase().indexOf(kw)===-1) return false;
+      if(q){
+        var hay = ((d.title||'')+' '+(d.director||'')+' '+(d.author||'')+' '+(d.year||'')+' '+(d.cast||'')+' '+(d.genre||'')).toLowerCase();
+        if(hay.indexOf(q)===-1) return false;
+      }
       return getFilmCategory(d)===status;
     });
     var box = document.getElementById(type+'-list-'+status);
     if(!box) return;
-    if(items.length===0){ box.innerHTML='<div class="film-empty">还没有记录哦</div>'; return; }
+    if(items.length===0){ box.innerHTML='<div class="film-empty">'+(q?'无匹配结果':'还没有记录哦')+'</div>'; return; }
     var colorClasses = ['c1','c2','c3','c4'];
     box.innerHTML = items.map(function(d, idx){
       var coverUrl = type==='movie' ? (d.poster||'') : (d.cover||'');
@@ -2586,7 +2857,7 @@
   }
   function initFilmSwipe() {
     document.querySelectorAll('.film-swipe-wrap').forEach(wrap=>{
-      let startX=0, currentX=0, isDragging=false;
+      let startX=0, currentX=0, isDragging=false, touchTarget=null;
       const card = wrap.querySelector('.film-card');
       const actions = wrap.querySelector('.film-swipe-actions');
       const actionWidth = 144; // 72*2
@@ -2595,7 +2866,7 @@
         actions.style.opacity = Math.min(Math.abs(x)/actionWidth, 1);
       }
       wrap.addEventListener('touchstart', e=>{
-        startX=e.touches[0].clientX; isDragging=true;
+        startX=e.touches[0].clientX; isDragging=true; touchTarget=e.target;
         // Reset other swipe wraps
         document.querySelectorAll('.film-swipe-wrap').forEach(other=>{
           if(other!==wrap) other.querySelector('.film-card').style.transform='translateX(0)';
@@ -2611,6 +2882,7 @@
       });
       wrap.addEventListener('touchend', ()=>{
         isDragging=false;
+        if(touchTarget && (touchTarget.classList.contains('film-swipe-edit-btn') || touchTarget.classList.contains('film-swipe-delete-btn'))) return;
         if(currentX < -actionWidth*0.4) { currentX = -actionWidth; setPos(currentX); }
         else { currentX = 0; setPos(0); }
       });
@@ -2624,17 +2896,18 @@
     return String(str).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
   }
 
-  function formatTime() { const n=new Date(); return n.getMonth()+1+'.'+n.getDate()+' '+n.getHours()+':'+String(n.getMinutes()).padStart(2,'0'); }
+  function formatTime(ts){ if(!ts) return ''; const n=new Date(ts); if(isNaN(n.getTime())) return ''; return n.getFullYear()+'.'+(n.getMonth()+1)+'.'+n.getDate()+' '+n.getHours()+':'+String(n.getMinutes()).padStart(2,'0'); }
   function renderMessages() {
     const list = document.getElementById('msgList');
     if(messages.length===0){ list.innerHTML='<div class="msg-empty">还没有留言，来写第一条吧</div>'; return; }
-    list.innerHTML = messages.map(m=>`<div class="msg-card ${m.role}"><div class="msg-text">${m.text}</div><div class="msg-footer"><span class="msg-author ${m.role}">${m.role==='gege'?'哥哥':'宝宝'}</span><span class="msg-time">${m.time}</span></div></div>`).join('');
+    list.innerHTML = messages.map(m=>`<div class="msg-card ${m.role}"><div class="msg-text">${m.text}</div><div class="msg-footer"><span class="msg-author ${m.role}">${m.role==='gege'?'哥哥':'宝宝'}</span><span class="msg-time">${formatTime(m.time)}</span></div></div>`).join('');
   }
   document.getElementById('msgSubmit').addEventListener('click',()=>{
     if(!onlineRole){ return; }
     const text = document.getElementById('msgTextarea').value.trim();
     if(!text) return;
-    messages.unshift({role:onlineRole, text:text, time:formatTime(), date:todayKey()});
+    messages.unshift({role:onlineRole, text:text, time:new Date().toISOString(), date:todayKey()});
+    if(window.Cloud) Cloud.addMessage({role:onlineRole, text:text});
     document.getElementById('msgTextarea').value='';
     renderMessages();
     checkAchieveRedDot();
@@ -2655,7 +2928,9 @@
   window.addMistake = function() {
     const text = document.getElementById('mistakeText').value.trim();
     if(!text) return;
-    mistakes.unshift({id:Date.now(), text:text, time:noteTime(), replies:[], tags:[]});
+    const item={id:genId(), text:text, time:noteTime(), replies:[], tags:[]};
+    mistakes.unshift(item);
+    if(window.Cloud) Cloud.mistakeSave(item);
     document.getElementById('mistakeText').value='';
     renderMistakes();
     checkAchieveRedDot();
@@ -2691,6 +2966,7 @@
     const tag = m._selectedTag || null;
     m.replies.push({text:text, time:noteTime(), tag:tag});
     m._selectedTag = null;
+    if(window.Cloud) Cloud.mistakeSave(m);
     renderMistakes();
     checkAchieveRedDot();
   };
@@ -2704,7 +2980,9 @@
   window.addGrudge = function() {
     const text = document.getElementById('grudgeText').value.trim();
     if(!text) return;
-    grudges.unshift({id:Date.now()+1, text:text, time:noteTime(), replies:[], tags:[]});
+    const item={id:genId(), text:text, time:noteTime(), replies:[], tags:[]};
+    grudges.unshift(item);
+    if(window.Cloud) Cloud.grudgeSave(item);
     document.getElementById('grudgeText').value='';
     renderGrudges();
     checkAchieveRedDot();
@@ -2740,6 +3018,7 @@
     const tag = m._selectedTag || null;
     m.replies.push({text:text, time:noteTime(), tag:tag});
     m._selectedTag = null;
+    if(window.Cloud) Cloud.grudgeSave(m);
     renderGrudges();
     checkAchieveRedDot();
   };
@@ -2752,7 +3031,9 @@
     const text = document.getElementById('capsuleText').value.trim();
     const date = document.getElementById('capsuleDate').value;
     if(!text || !date){ alert('请填写内容和拆封日期'); return; }
-    capsules.unshift({id:Date.now(), role:onlineRole, text:text, writeTime:noteTime(), openDate:date, opened:false});
+    var capObj = {id:Date.now(), role:onlineRole, text:text, writeTime:noteTime(), openDate:date, opened:false};
+    capsules.unshift(capObj);
+    if(window.Cloud){ Cloud.addCapsule({role:onlineRole, text:text, openDate:date}).then(function(d){ if(d && d.id) capObj.id = d.id; }); }
     document.getElementById('capsuleText').value='';
     document.getElementById('capsuleDate').value='';
     renderCapsules();
@@ -2788,7 +3069,7 @@
   };
   window.openCapsule = function(id) {
     const c = capsules.find(x=>x.id===id);
-    if(c){ c.opened = true; renderCapsules(); checkAchieveRedDot(); }
+    if(c){ c.opened = true; if(window.Cloud) Cloud.openCapsule(c.id); renderCapsules(); checkAchieveRedDot(); }
   };
 
   // ========== WISH TREE ==========
@@ -2798,7 +3079,9 @@
     if(!onlineRole){ return; }
     const text = document.getElementById('wishText').value.trim();
     if(!text) return;
-    wishes.unshift({id:Date.now(), role:onlineRole, text:text, time:noteTime(), fulfilled:false, fulfilledBy:null, fulfilledTime:null});
+    const item={id:genId(), role:onlineRole, text:text, time:noteTime(), fulfilled:false, fulfilledBy:null, fulfilledTime:null};
+    wishes.unshift(item);
+    if(window.Cloud) Cloud.wishSave(item);
     document.getElementById('wishText').value='';
     renderWishes();
     checkAchieveRedDot();
@@ -2842,6 +3125,7 @@
     w.fulfilled = true;
     w.fulfilledBy = onlineRole;
     w.fulfilledTime = noteTime();
+    if(window.Cloud) Cloud.wishSave(w);
     renderWishes();
     checkAchieveRedDot();
   };
@@ -2877,7 +3161,9 @@
 
   function saveGameScore(game, score) {
     if(!onlineRole || score <= 0) return;
-    gameScores.push({game:game, role:onlineRole, score:score, time:Date.now()});
+    const item={id:genId(), game:game, role:onlineRole, score:score, time:Date.now()};
+    gameScores.push(item);
+    if(window.Cloud) Cloud.gameSave(item);
     renderLeaderboard();
     document.getElementById('gameOverScore').textContent = score;
     document.getElementById('gameOverOverlay').classList.add('show');
@@ -4911,12 +5197,11 @@ const ACHIEVEMENTS = [
             if(a.category === 'single'){
               badgeText = a.role === 'gege' ? '哥哥' : '宝宝';
             } else {
+              const coTag = a.hidden ? '' : (/^(WF-|CP-O-)/.test(a.id) ? '共同' : '分别');
               const rp = getRoleProgress(a);
               const gU = rp.gege >= a.target, bU = rp.baobao >= a.target;
-              if(gU && bU) badgeText = '哥哥 & 宝宝';
-              else if(gU) badgeText = '哥哥';
-              else if(bU) badgeText = '宝宝';
-              else badgeText = '已解锁';
+              const who = (gU && bU) ? '哥哥 & 宝宝' : gU ? '哥哥' : bU ? '宝宝' : '已解锁';
+              badgeText = (coTag ? coTag + ' · ' : '') + who;
             }
             badgeCls = '';
           }
@@ -4988,15 +5273,16 @@ const ACHIEVEMENTS = [
       dot.className = 'bn-red-dot';
       bnDot.appendChild(dot);
     }
-    // v3.12：达成瞬间自动记录解锁时间 + 弹出庆祝弹窗（只弹第一个）
+    // v3.30.2：云端“已获得”基线建立之前不弹窗、不标记，避免每次进入重复弹陈旧成就
+    if(!achieveInitialized) return;
     newUnlocked.forEach(function(a){
       if(!a._unlockTime) a._unlockTime = noteTime();
       seenAchievements.add(a.id);
+      if(window.Cloud && Cloud.ready) Cloud.syncAchievementUnlocked(a.id, Cloud.role);
     });
-    if(newUnlocked.length > 0 && achieveInitialized) {
+    if(newUnlocked.length > 0) {
       showUnlockCelebrate(newUnlocked[0]);
     }
-    achieveInitialized = true;
   }
   function showUnlockCelebrate(a){
     const ov = document.getElementById('unlockCelebrateOverlay');
@@ -5009,7 +5295,8 @@ const ACHIEVEMENTS = [
       badgeText = a.role === 'gege' ? '哥哥专属' : '宝宝专属';
       badgeCls = a.role;
     } else {
-      badgeText = '双人成就';
+      const coTag = a.hidden ? '' : (/^(WF-|CP-O-)/.test(a.id) ? '共同成就' : '分别成就');
+      badgeText = coTag || '双人成就';
       badgeCls = 'couple';
     }
     const badge = document.getElementById('unlockCelebrateBadge');
@@ -5044,11 +5331,12 @@ const ACHIEVEMENTS = [
       const isGS = a.id.indexOf('GS-')===0;
       const gTxt = isGS ? (gUn ? '✓' : '未获得') : (rp.gege + '/' + a.target + (gUn ? ' ✓' : ' 未获得'));
       const bTxt = isGS ? (bUn ? '✓' : '未获得') : (rp.baobao + '/' + a.target + (bUn ? ' ✓' : ' 未获得'));
+      const coTag = a.hidden ? '' : (/^(WF-|CP-O-)/.test(a.id) ? '共同成就' : '分别成就');
       let unlockerText = '';
       if(gUn && bUn) unlockerText = '哥哥 & 宝宝';
       else if(gUn) unlockerText = '哥哥';
       else if(bUn) unlockerText = '宝宝';
-      html += '<div class="achieve-detail-unlocker">解锁者：' + unlockerText + '</div>';
+      html += '<div class="achieve-detail-unlocker">类型：' + coTag + '　解锁者：' + unlockerText + '</div>';
       html += '<div class="achieve-detail-time">解锁时间：' + a._unlockTime + '</div>';
       html += '<div class="achieve-detail-progress-row">';
       html += '<div class="achieve-detail-progress-item"><div class="achieve-detail-progress-name gege">哥哥</div><div class="achieve-detail-progress-val '+(gUn?'unlocked':'')+'">'+gTxt+'</div></div>';
@@ -5826,7 +6114,9 @@ const ACHIEVEMENTS = [
     const date = document.getElementById('anniDateInp').value;
     const type = document.getElementById('anniTypeInp').value;
     if(!title || !date) return;
-    anniversaries.push({title, date, type});
+    const item={id:genId(), title, date, type};
+    anniversaries.push(item);
+    if(window.Cloud) Cloud.anniAdd(item);
     document.getElementById('anniTitleInp').value='';
     document.getElementById('anniDateInp').value='';
     anniModal.classList.remove('show');
@@ -5834,7 +6124,9 @@ const ACHIEVEMENTS = [
     checkAchieveRedDot();
   };
   window.deleteAnniversary = function(idx) {
+    const item = anniversaries[idx];
     anniversaries.splice(idx,1);
+    if(item && window.Cloud) Cloud.anniDelete(item.id);
     renderAnniversaries();
   };
   anniModal.addEventListener('click',e=>{if(e.target===anniModal)anniModal.classList.remove('show')});
@@ -6074,6 +6366,7 @@ const ACHIEVEMENTS = [
 
     if(!moodData[selectedCalDate]) moodData[selectedCalDate] = {};
     moodData[selectedCalDate][onlineRole] = selectedMoodKey;
+    if(window.Cloud) Cloud.saveMood(selectedCalDate, onlineRole, selectedMoodKey);
 
     // Reset and close
     selectedMoodKey = null;
