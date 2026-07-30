@@ -126,6 +126,7 @@
   .cloud::after { width:38px; height:38px; top:-12px; right:42px; }
   .cloud-title { font-family:var(--font-en); font-size:24px; font-weight:600; color:var(--text); letter-spacing:1px; }
   .cloud-sub { font-family:var(--font-zh); font-size:13px; color:var(--text-sub); margin-top:2px; display:flex; justify-content:center; align-items:center; gap:3px; height:22px; }
+  .ver-tag { font-family:var(--font-en); font-size:10px; color:var(--text-sub); opacity:0.55; margin-top:2px; letter-spacing:0.5px; }
   /* v3.30.3：常驻空间邀请码，杜绝“空间串台”导致的数据不同步 */
   .space-chip { display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:3px 10px; border-radius:999px; background:rgba(212,154,171,0.16); border:1px solid rgba(212,154,171,0.45); font-family:var(--font-zh); font-size:12px; color:#b06a82; cursor:pointer; transition:background .2s; user-select:none; }
   .space-chip:hover { background:rgba(212,154,171,0.28); }
@@ -1555,6 +1556,7 @@ window.switchSpace=function(){
     <div class="cloud">
       <div class="cloud-title">Our Home</div>
       <div class="cloud-sub" id="onlineBadge"><span id="onlineDot"></span></div>
+      <div class="ver-tag">v3.30.3</div>
     </div>
   </header>
   <div class="cloud-toast" id="cloudToast"></div>
