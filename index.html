@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>哥哥我是小猫的状态</title>
-<!-- Our Home v3.30.3 -->
+<!-- Our Home v3.30.5 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -136,6 +136,7 @@
   /* 云端同步成功提示 */
   .cloud-toast { position:fixed; left:50%; bottom:84px; transform:translateX(-50%) translateY(20px); background:rgba(93,138,168,0.95); color:#fff; font-family:var(--font-zh); font-size:13px; padding:9px 18px; border-radius:999px; box-shadow:0 6px 20px rgba(93,138,168,0.4); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:9999; }
   .cloud-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .cloud-toast.err { background:rgba(192,106,106,0.96); box-shadow:0 6px 20px rgba(192,106,106,0.42); max-width:84vw; white-space:normal; text-align:center; }
 
   .main {
     flex:1; margin-top:var(--top-h); margin-bottom:var(--nav-h);
@@ -1347,13 +1348,28 @@ const Cloud=(function(){
   async function init(){
     try{
       sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-      const {data,error}=await sb.auth.signInAnonymously();
-      if(error){console.error('Cloud 匿名登录失败',error);return false;}
-      userId=data.user.id;
       spaceId=localStorage.getItem('oh_space_id');
       role=localStorage.getItem('oh_role');
-      ready=true; return true;
-    }catch(e){console.error('Cloud init err',e);return false;}
+      // v3.30.4：匿名 API key 本身即可读写（RLS 已放行 anon 角色），不依赖 signInAnonymously；
+      // 登录仅用于获取用户身份（在线状态等），失败不应阻塞写入，故先置 ready=true
+      ready=true;
+      try{
+        const {data,error}=await sb.auth.signInAnonymously();
+        if(!error && data && data.user){ userId=data.user.id; }
+        else { console.warn('Cloud 匿名登录未成功（不影响云端读写）：', error&&error.message); }
+      }catch(e){ console.warn('Cloud 匿名登录异常（不影响云端读写）：', e); }
+      return true;
+    }catch(e){console.error('Cloud init err',e);ready=false;return false;}
+  }
+  // v3.30.4：所有写入先等待云端就绪（匿名登录完成）；若登录失败会自动重试一次，避免“未就绪就写入→静默丢数据”
+  let _saveResult=null;
+  function onSaveResult(fn){ _saveResult=fn; }
+  function _done(res){ try{ if(_saveResult)_saveResult(res); }catch(e){} return res; }
+  async function ensureReady(){
+    if(ready) return true;
+    for(let i=0;i<50;i++){ if(ready) return true; await new Promise(function(r){setTimeout(r,200);}); }
+    if(!ready){ try{ await init(); }catch(e){} }
+    return ready;
   }
   function setIdentity(r){role=r;localStorage.setItem('oh_role',r);}
   async function createSpace(){
@@ -1389,24 +1405,50 @@ const Cloud=(function(){
     ]);
     return{moods:m.data||[],caps:c.data||[],msgs:msg.data||[],ach:ach.data||[],anns:ann.data||[],wishes:wsh.data||[],mistakes:mst.data||[],grudges:grd.data||[],games:gm.data||[],media:med.data||[],ctrls:cr.data||[]};
   }
-  async function saveMood(date,r,mk){ if(!ready||!spaceId)return; const {error}=await sb.from('moods').upsert({space_id:spaceId,date:date,role:r,mood_key:mk},{onConflict:'space_id,date,role'}); if(error)console.error('Cloud saveMood 失败:',error.message); }
-  async function addCapsule(cap){ if(!ready||!spaceId)return null; const {data,error}=await sb.from('capsules').insert({space_id:spaceId,title:cap.title||'',content:cap.text,role:cap.role,open_at:cap.openDate?cap.openDate+'T00:00:00+00:00':null,opened:false}).select().single(); if(error){console.error('Cloud addCapsule 失败:',error.message);return null;} return data; }
-  async function openCapsule(id){ if(!ready||!spaceId)return; await sb.from('capsules').update({opened:true}).eq('space_id',spaceId).eq('id',id); }
-  async function addMessage(m){ if(!ready||!spaceId)return false; const {error}=await sb.from('messages').insert({space_id:spaceId,role:m.role,content:m.text}); if(error){console.error('Cloud addMessage 失败:',error.message); return false;} return true; }
-  async function wishSave(w){ if(!ready||!spaceId)return false; const {error}=await sb.from('wishes').upsert({space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},{onConflict:'space_id,id'}); if(error){console.error('Cloud wishSave 失败:',error.message);return false;} return true; }
-  async function mistakeSave(m){ if(!ready||!spaceId)return false; const {error}=await sb.from('mistakes').upsert({space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},{onConflict:'space_id,id'}); if(error){console.error('Cloud mistakeSave 失败:',error.message);return false;} return true; }
-  async function grudgeSave(g){ if(!ready||!spaceId)return false; const {error}=await sb.from('grudges').upsert({space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},{onConflict:'space_id,id'}); if(error){console.error('Cloud grudgeSave 失败:',error.message);return false;} return true; }
-  async function gameSave(g){ if(!ready||!spaceId)return false; const {error}=await sb.from('game_scores').upsert({space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},{onConflict:'space_id,id'}); if(error){console.error('Cloud gameSave 失败:',error.message);return false;} return true; }
-  async function anniAdd(a){ if(!ready||!spaceId)return false; const {error}=await sb.from('anniversaries').upsert({space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},{onConflict:'space_id,id'}); if(error){console.error('Cloud anniAdd 失败:',error.message);return false;} return true; }
-  async function anniDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
-  async function mediaSave(item,kind){ if(!ready||!spaceId)return; const {error}=await sb.from('media').upsert({space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:item.publisher||null,country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},{onConflict:'space_id,id'}); if(error)console.error('Cloud mediaSave 失败:',error.message); }
-  async function mediaDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
-  async function ctrlSave(r){ if(!ready||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const {error}=await sb.from('ctrl_records').upsert({space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},{onConflict:'space_id,id'}); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
-  async function ctrlDelete(id){ if(!ready||!spaceId)return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
-  async function syncFirstSeen(key,r){ if(!ready||!spaceId)return; const {error}=await sb.from('achievements').upsert({space_id:spaceId,key:String(key),unlocked_by:r,unlocked_at:new Date().toISOString()},{onConflict:'space_id,key'}); if(error)console.error('Cloud syncFirstSeen 失败:',error.message); }
-  // v3.30.2：把“已解锁成就的 id”也写入云端，使阈值类成就（看片/错题等）的达成状态可跨设备记忆，不再每次进入重复弹窗
-  async function syncAchievementUnlocked(id,r){ if(!ready||!spaceId)return; const {error}=await sb.from('achievements').upsert({space_id:spaceId,key:String(id),unlocked_by:r,unlocked_at:new Date().toISOString()},{onConflict:'space_id,key'}); if(error)console.error('Cloud syncAchievementUnlocked 失败:',error.message); }
-  async function setPresence(online){ if(!ready||!spaceId)return; const {error}=await sb.from('presence').upsert({space_id:spaceId,user_id:userId,role:role,online:online,last_seen:new Date().toISOString()},{onConflict:'space_id,user_id'}); if(error)console.error('Cloud setPresence 失败:',error.message); }
+  // v3.30.4：还原 saveMood（此前被误删），心情按 (space_id,date,role) 唯一，每人每天一条
+  async function saveMood(date,r,mk){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('moods',{space_id:spaceId,date:date,role:r,mood_key:mk},[['space_id',spaceId],['date',date],['role',r]]); if(error){console.error('Cloud saveMood 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function addMessage(m){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const {error}=await sb.from('messages').insert({space_id:spaceId,role:m.role,content:m.text}); if(error){console.error('Cloud addMessage 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function addCapsule(cap){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const {data,error}=await sb.from('capsules').insert({space_id:spaceId,title:cap.title||'',content:cap.text,role:cap.role,open_at:cap.openDate?cap.openDate+'T00:00:00+00:00':null,opened:false}).select().single(); if(error){console.error('Cloud addCapsule 失败:',error.message);return _done({ok:false,error:error.message});} _done({ok:true}); return data; }
+  async function openCapsule(id){ if(!await ensureReady()||!spaceId)return; await sb.from('capsules').update({opened:true}).eq('space_id',spaceId).eq('id',id); }
+  async function wishSave(w){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('wishes',{space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},[['space_id',spaceId],['id',String(w.id)]]); if(error){console.error('Cloud wishSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function mistakeSave(m){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('mistakes',{space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},[['space_id',spaceId],['id',String(m.id)]]); if(error){console.error('Cloud mistakeSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function grudgeSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('grudges',{space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud grudgeSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function anniAdd(a){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('anniversaries',{space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},[['space_id',spaceId],['id',String(a.id)]]); if(error){console.error('Cloud anniAdd 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
+  async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:item.publisher||null,country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function mediaDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
+  async function ctrlSave(r){ if(!await ensureReady()||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const error=await upsertSafe('ctrl_records',{space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},[['space_id',spaceId],['id',String(r.id)]]); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
+  async function ctrlDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
+  // v3.30.5：iOS Safari 下 Supabase 的 .upsert({onConflict}) 会因 Prefer 头 + on_conflict 查询参数组合触发 “Failed to fetch”（類型錯誤:加載失敗）；
+  // 留言模块用 .insert() 正常，其余模块均用 upsert 故报错。统一改走“先插后更”的兼容写法：优先 insert（POST，iOS 安全），遇到唯一冲突(23505)再 update，规避 iOS 该问题。
+  async function upsertSafe(table, payload, conflict){
+    if(!sb||!spaceId) return {message:'云端未就绪，稍候重试'};
+    // v3.30.5：最多重试一次，规避 iOS Safari 偶发的 "Failed to fetch" 瞬时网络抖动
+    let lastErr = null;
+    for(let attempt=0; attempt<2; attempt++){
+      // 1) 先尝试插入（POST，已验证 iOS Safari 可用）
+      const ins = await sb.from(table).insert(payload);
+      if(!ins.error) return null;
+      // 2) 唯一冲突 → 说明行已存在 → 改为按唯一键更新（PATCH）
+      if(ins.error.code==='23505'){
+        let u = sb.from(table).update(payload);
+        (conflict||[]).forEach(function(c){ u = u.eq(c[0], c[1]); });
+        const ures = await u;
+        if(!ures.error) return null;
+        lastErr = ures.error;
+      } else {
+        lastErr = ins.error;
+      }
+      await new Promise(function(r){ setTimeout(r, 400); });
+    }
+    return lastErr || {message:'云端写入失败'};
+  }
+  // v3.30.5：先查云端是否已有该成就——存在则保留原始解锁时间不覆盖，避免每次刷新把 unlocked_at 改写成"当下时间"
+  async function syncFirstSeen(key,r){ if(!await ensureReady()||!spaceId)return; const k=String(key); const {data:ex}=await sb.from('achievements').select('key').eq('space_id',spaceId).eq('key',k).maybeSingle(); if(ex)return; const {error}=await sb.from('achievements').insert({space_id:spaceId,key:k,unlocked_by:r,unlocked_at:new Date().toISOString()}); if(error&&error.code!=='23505')console.error('Cloud syncFirstSeen 失败:',error.message); }
+  // v3.30.2：把“已解锁成就的 id”也写入云端，使阈值类成就（看片/错题等）的达成状态可跨设备记忆，不再每次进入重复弹窗。v3.30.5 改为非覆写。
+  async function syncAchievementUnlocked(id,r){ if(!await ensureReady()||!spaceId)return; const k=String(id); const {data:ex}=await sb.from('achievements').select('key').eq('space_id',spaceId).eq('key',k).maybeSingle(); if(ex)return; const {error}=await sb.from('achievements').insert({space_id:spaceId,key:k,unlocked_by:r,unlocked_at:new Date().toISOString()}); if(error&&error.code!=='23505')console.error('Cloud syncAchievementUnlocked 失败:',error.message); }
+  async function setPresence(online){ if(!await ensureReady()||!spaceId)return; const error=await upsertSafe('presence',{space_id:spaceId,user_id:userId,role:role,online:online,last_seen:new Date().toISOString()},[['space_id',spaceId],['user_id',userId]]); if(error)console.error('Cloud setPresence 失败:',error.message); }
   function subscribePresence(cb){ if(!ready||!spaceId)return; presCh=sb.channel('presence-'+spaceId).on('postgres_changes',{event:'*',schema:'public',table:'presence',filter:'space_id=eq.'+spaceId},cb).subscribe(); }
   // 记录表实时订阅：任一设备增删改，本设备立即拉取该表最新数据并刷新对应界面
   let recCh=null;
@@ -1429,7 +1471,7 @@ const Cloud=(function(){
   if(document.readyState!=='loading'){ init(); } else { document.addEventListener('DOMContentLoaded', init); }
   window.addEventListener('beforeunload',function(){ if(ready) setPresence(false); });
   return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,wishSave:wishSave,mistakeSave:mistakeSave,grudgeSave:grudgeSave,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,getSpaceCode:getSpaceCode,
-    get spaceId(){return spaceId;},get role(){return role;},get ready(){return ready;}};
+    get spaceId(){return spaceId;},get role(){return role;},get ready(){return ready;},onSaveResult:onSaveResult};
 })();
 window.Cloud=Cloud;
 </script>
@@ -1556,7 +1598,7 @@ window.switchSpace=function(){
     <div class="cloud">
       <div class="cloud-title">Our Home</div>
       <div class="cloud-sub" id="onlineBadge"><span id="onlineDot"></span></div>
-      <div class="ver-tag">v3.30.3</div>
+      <div class="ver-tag">v3.30.5</div>
     </div>
   </header>
   <div class="cloud-toast" id="cloudToast"></div>
@@ -2114,9 +2156,32 @@ window.switchSpace=function(){
   let gameScores = [];
   let onlineRole = null;
   let seenAchievements = new Set();
+  // v3.30.5：成就解锁时间与"已看过"集合本地持久化——即便云端同步失败（iOS Safari 等），原始解锁时间与"已弹过"状态也不会丢
+  let unlockTimeMap = {};
+  let __achSeeding = false;
+  try{
+    const _t = JSON.parse(localStorage.getItem('oh_unlock_times')||'{}');
+    if(_t && typeof _t==='object') unlockTimeMap = _t;
+    const _s = JSON.parse(localStorage.getItem('oh_seen_achievements')||'[]');
+    if(Array.isArray(_s)) _s.forEach(function(id){ seenAchievements.add(id); });
+  }catch(e){}
   let achieveInitialized = false; // v3.12：启动时静默标记已解锁，不弹庆祝弹窗
   // v3.12：首达成就追踪 & 隐藏成就独立计数器
-  let firstSeen = new Proxy({}, { set:function(t,p,v){ t[p]=v; if(v===true && window.Cloud && Cloud.ready){ Cloud.syncFirstSeen(String(p), Cloud.role); } return true; } });
+  let firstSeen = new Proxy({}, { set:function(t,p,v){ t[p]=v; if(!__achSeeding && v===true && window.Cloud && Cloud.ready){ Cloud.syncFirstSeen(String(p), Cloud.role); } return true; } });
+  // v3.30.5：成就解锁时间 & "已看过"集合本地持久化——即便云端同步失败（iOS Safari 等），原始解锁时间与"已弹过"状态也不丢
+  function persistAch(){ try{ localStorage.setItem('oh_unlock_times', JSON.stringify(unlockTimeMap)); localStorage.setItem('oh_seen_achievements', JSON.stringify(Array.from(seenAchievements))); }catch(e){} }
+  // 把云端成就记录的 key 映射到成就 id，写入 unlockTimeMap（详情页据此外显真实解锁时间，而非刷新时间）
+  function setAchTimeFromCloud(k, t){
+    if(!t) return;
+    var id = k;
+    if(typeof ACHIEVEMENTS!=='undefined'){
+      var found=false;
+      for(var i=0;i<ACHIEVEMENTS.length;i++){ if(ACHIEVEMENTS[i].id===k){ id=ACHIEVEMENTS[i].id; found=true; break; } }
+      if(!found && window.__achKeyMap && window.__achKeyMap[k]) id=window.__achKeyMap[k];
+    }
+    // v3.30.5：云端 unlocked_at 为 ISO 串，统一成 noteTime 的展示格式，避免刷新后详情页显示原始 ISO 时间
+    unlockTimeMap[id]=fmtNoteTime(new Date(t));
+  }
   let ctrlPageOpenCount = 0;
   let babyStartGameCount = 0;
   let movies = [];
@@ -2186,15 +2251,20 @@ window.switchSpace=function(){
       else if(table==='capsules'){ capsules = rows.map(function(c){ return {id:c.id, role:c.role, text:c.content, title:c.title||'', writeTime:'', openDate:(c.open_at||'').slice(0,10), opened:c.opened}; }); if(typeof renderCapsules==='function') renderCapsules(); }
       else if(table==='messages'){ messages = rows.map(function(m){ return {role:m.role, text:m.content, time:m.created_at, date:''}; }); if(typeof renderMessages==='function') renderMessages(); }
       else if(table==='achievements'){
-        rows.forEach(function(a){ firstSeen[a.key]=true; });
+        // v3.30.5：实时同步到的成就，按云端 unlocked_at 记录真实解锁时间，并用 __achSeeding 守卫避免回写触发多余同步
+        __achSeeding = true;
+        rows.forEach(function(a){ firstSeen[a.key]=true; setAchTimeFromCloud(a.key, a.unlocked_at); });
         // v3.30.2：实时同步到的已获得成就也视为已看过，不弹陈旧弹窗
         if(typeof ACHIEVEMENTS!=='undefined'){
           if(!window.__achKeyMap){ window.__achKeyMap={}; ACHIEVEMENTS.forEach(function(x){ var m=(''+x.check).match(/firstSeen\['?([\w]+)'?\]/); if(m) window.__achKeyMap[m[1]]=x.id; }); }
           rows.forEach(function(a){
             ACHIEVEMENTS.forEach(function(x){ if(x.id===a.key) seenAchievements.add(x.id); });
             if(window.__achKeyMap[a.key]) seenAchievements.add(window.__achKeyMap[a.key]);
+            setAchTimeFromCloud(a.key, a.unlocked_at);
           });
         }
+        __achSeeding = false;
+        persistAch();
         if(typeof checkAchieveRedDot==='function') checkAchieveRedDot();
       }
     });
@@ -2206,6 +2276,19 @@ window.switchSpace=function(){
     t.textContent=msg; t.classList.add('show');
     clearTimeout(window.__cloudToastT);
     window.__cloudToastT=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+  }
+  // v3.30.4：失败用红提示，并把真实错误显示出来
+  function showCloudError(msg){
+    const t=document.getElementById('cloudToast'); if(!t) return;
+    t.textContent='⚠️ '+msg; t.classList.add('show','err');
+    clearTimeout(window.__cloudToastT);
+    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show','err'); }, 3800);
+  }
+  // v3.30.4：统一接收云端写入结果——成功弹绿提示，失败弹红提示，不再静默丢数据
+  function registerCloudResult(){
+    if(window.Cloud && Cloud.onSaveResult){
+      Cloud.onSaveResult(function(r){ if(r&&r.ok) showCloudToast('已同步到云端 ✔'); else if(r) showCloudError(r.error||'同步失败'); });
+    }
   }
   function setupSpaceChip(){
     const chip=document.getElementById('spaceChip');
@@ -2253,20 +2336,26 @@ window.switchSpace=function(){
       Cloud.ensureMember(role);
       Cloud.setPresence(true);
       setupSpaceChip();
+      registerCloudResult();
       Cloud.loadAll().then(function(d){
         try{
           (d.moods||[]).forEach(function(m){ if(!moodData[m.date]) moodData[m.date]={}; moodData[m.date][m.role]=m.mood_key; });
           capsules = (d.caps||[]).map(function(c){ return {id:c.id, role:c.role, text:c.content, title:c.title||'', writeTime:'', openDate:(c.open_at||'').slice(0,10), opened:c.opened}; });
           messages = (d.msgs||[]).map(function(m){ return {role:m.role, text:m.content, time:m.created_at, date:''}; });
-          (d.ach||[]).forEach(function(a){ firstSeen[a.key]=true; });
+          // v3.30.5：初始化基线时按云端 unlocked_at 记录真实解锁时间，并用 __achSeeding 守卫避免回写
+          __achSeeding = true;
+          (d.ach||[]).forEach(function(a){ firstSeen[a.key]=true; setAchTimeFromCloud(a.key, a.unlocked_at); });
           // v3.30.2：云端已获得的成就（按成就 id 或 firstSeen key）视为已看过，建立“已获得”基线，避免每次进入重复弹陈旧弹窗
           if(typeof ACHIEVEMENTS!=='undefined'){
             if(!window.__achKeyMap){ window.__achKeyMap={}; ACHIEVEMENTS.forEach(function(x){ var m=(''+x.check).match(/firstSeen\['?([\w]+)'?\]/); if(m) window.__achKeyMap[m[1]]=x.id; }); }
             (d.ach||[]).forEach(function(a){
               ACHIEVEMENTS.forEach(function(x){ if(x.id===a.key) seenAchievements.add(x.id); });
               if(window.__achKeyMap[a.key]) seenAchievements.add(window.__achKeyMap[a.key]);
+              setAchTimeFromCloud(a.key, a.unlocked_at);
             });
           }
+          __achSeeding = false;
+          persistAch();
           achieveInitialized = true;
           if(d.anns && d.anns.length) anniversaries = d.anns.map(function(a){ return {id:a.id, title:a.title, date:a.date, type:a.type}; });
           if(d.wishes && d.wishes.length) wishes = d.wishes.map(function(w){ return {id:w.id, role:w.role, text:w.text, time:w.time, fulfilled:w.fulfilled, fulfilledBy:w.fulfilled_by, fulfilledTime:w.fulfilled_time}; });
@@ -2969,13 +3058,15 @@ window.switchSpace=function(){
     renderMessages();
     document.getElementById('msgTextarea').value='';
     checkAchieveRedDot();
-    if(window.Cloud){ Cloud.addMessage({role:onlineRole, text:text}).then(function(ok){ if(ok) showCloudToast('已同步到云端 ✔'); }); }
+    if(window.Cloud){ Cloud.addMessage({role:onlineRole, text:text}); }
   });
 
   // NOTEBOOKS
-  function noteTime() {
-    const n = new Date();
+  function fmtNoteTime(n){
     return n.getFullYear()+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+String(n.getDate()).padStart(2,'0')+' '+n.getHours()+':'+String(n.getMinutes()).padStart(2,'0');
+  }
+  function noteTime() {
+    return fmtNoteTime(new Date());
   }
 
   // 哥哥错题本
@@ -5335,8 +5426,11 @@ const ACHIEVEMENTS = [
     // v3.30.2：云端“已获得”基线建立之前不弹窗、不标记，避免每次进入重复弹陈旧成就
     if(!achieveInitialized) return;
     newUnlocked.forEach(function(a){
-      if(!a._unlockTime) a._unlockTime = noteTime();
+      // v3.30.5：优先用云端/本地已记录的真实解锁时间；本地首次触发（云端尚未回写）才用当前时刻，并记录下来
+      a._unlockTime = unlockTimeMap[a.id] || noteTime();
+      unlockTimeMap[a.id] = a._unlockTime;
       seenAchievements.add(a.id);
+      persistAch();
       if(window.Cloud && Cloud.ready) Cloud.syncAchievementUnlocked(a.id, Cloud.role);
     });
     if(newUnlocked.length > 0) {
@@ -5370,7 +5464,8 @@ const ACHIEVEMENTS = [
   window.openAchieveDetail = function(achieveId) {
     const a = ACHIEVEMENTS.find(function(x){ return x.id === achieveId; });
     if(!a || !a.check()) return;
-    if(!a._unlockTime) a._unlockTime = noteTime();
+    // v3.30.5：详情页解锁时间用真实解锁时间（云端或本地记录），缺失时才回退到当前时刻
+    if(!a._unlockTime) a._unlockTime = unlockTimeMap[a.id] || noteTime();
     let html = '';
     html += '<div class="achieve-detail-icon" data-icon="'+a.icon+'">' + a.icon + '</div>';
     html += '<div class="achieve-detail-title">' + a.title + '</div>';
@@ -6180,7 +6275,7 @@ const ACHIEVEMENTS = [
     document.getElementById('anniDateInp').value='';
     anniModal.classList.remove('show');
     checkAchieveRedDot();
-    if(window.Cloud){ Cloud.anniAdd(item).then(function(ok){ if(ok) showCloudToast('已同步到云端 ✔'); }); }
+    if(window.Cloud){ Cloud.anniAdd(item); }
   };
   window.deleteAnniversary = function(idx) {
     const item = anniversaries[idx];
