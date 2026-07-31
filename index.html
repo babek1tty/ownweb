@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>哥哥我是小猫的状态</title>
-<!-- Our Home v3.30.9 -->
+<!-- Our Home v3.30.10 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -496,6 +496,7 @@
     background:rgba(255,255,255,0.6); border-radius:14px; padding:12px;
   }
   .reply-form.show { display:block; }
+  .reply-locked { margin-top:12px; text-align:center; font-size:13px; color:#9a9a9a; background:rgba(0,0,0,0.03); border-radius:14px; padding:12px; }
   .reply-input {
     width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px;
     font-family:var(--font-zh); font-size:13px; background:rgba(255,255,255,0.8); outline:none;
@@ -514,6 +515,10 @@
     font-family:var(--font-zh); font-size:14px; background:rgba(255,255,255,0.8); resize:vertical; outline:none;
   }
   .nb-add-btn { margin-top:10px; padding:10px 20px; border-radius:12px; border:none; font-family:var(--font-zh); font-size:14px; background:var(--accent); color:var(--text); cursor:pointer; }
+  .nb-add-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .nb-add-btn.nb-locked { background:#c9c2bd; color:#fff; }
+  .nb-textarea:disabled { opacity:.5; cursor:not-allowed; background:#f3f0ec; }
+  .notebook-add-hint { margin-top:10px; font-size:13px; color:#b07a86; line-height:1.4; }
   .empty-note { text-align:center; padding:40px 0; color:var(--text-light); }
 
   /* 控制狂 */
@@ -1625,7 +1630,7 @@ window.switchSpace=function(){
     <div class="cloud">
       <div class="cloud-title">Our Home</div>
       <div class="cloud-sub" id="onlineBadge"><span id="onlineDot"></span></div>
-      <div class="ver-tag">v3.30.9</div>
+      <div class="ver-tag">v3.30.10</div>
     </div>
   </header>
   <div class="cloud-toast" id="cloudToast"></div>
@@ -2536,6 +2541,7 @@ window.switchSpace=function(){
     } else {
       achieveInitialized = true; // 本地模式（无云端）：保持原即时弹窗行为
     }
+    if(typeof updateNoteRoleUI==='function') updateNoteRoleUI();
     checkAchieveRedDot();
   };
 
@@ -3285,6 +3291,7 @@ window.switchSpace=function(){
     {key:'wood', label:'呆木头'},
   ];
   window.addMistake = function() {
+    if(onlineRole !== 'gege'){ showCloudToast('只有哥哥在线时才能记录错题'); return; }
     const text = document.getElementById('mistakeText').value.trim();
     if(!text) return;
     const item={id:genId(), text:text, time:noteTime(), replies:[], tags:[]};
@@ -3302,19 +3309,22 @@ window.switchSpace=function(){
         const tagHtml = r.tag ? '<span class="tag-pill-static mistake">'+MISTAKE_TAGS.find(t=>t.key===r.tag).label+'</span>' : '';
         return '<div class="reply-card"><div class="reply-meta">宝宝 · '+r.time+'</div>'+r.text+tagHtml+'</div>';
       }).join('');
-      const replyForm = `<div class="reply-form show" id="mistake-reply-${m.id}"><input class="reply-input" id="mistake-reply-input-${m.id}" placeholder="宝宝来留言..."><button class="reply-submit" onclick="addMistakeReply(${m.id})">发送</button></div>`;
-      const tagRow = `<div class="tag-row"><span class="tag-label">选一个：</span>${MISTAKE_TAGS.map(t=>'<button class="tag-pill mistake'+(m._selectedTag===t.key?' selected':'')+'" onclick="selectMistakeTag('+m.id+',\''+t.key+'\')">'+t.label+'</button>').join('')}</div>`;
+      const canReply = onlineRole === 'baobao';
+      const replyBlock = canReply
+        ? `<div class="reply-form show" id="mistake-reply-${m.id}"><input class="reply-input" id="mistake-reply-input-${m.id}" placeholder="宝宝来留言..."><button class="reply-submit" onclick="addMistakeReply('${m.id}')">发送</button></div>
+           <div class="tag-row"><span class="tag-label">选一个：</span>${MISTAKE_TAGS.map(t=>'<button class="tag-pill mistake'+(m._selectedTag===t.key?' selected':'')+'" onclick="selectMistakeTag(\''+m.id+'\',\''+t.key+'\')">'+t.label+'</button>').join('')}</div>`
+        : `<div class="reply-locked">😶 只有宝宝在线时才能回复哥哥的错题</div>`;
       return `<div class="swipe-wrap" data-idx="${m.id}">
         <div class="swipe-delete-btn" onclick="deleteMistake('${m.id}')">删除</div>
         <div class="swipe-card note-card note-mistake">
           <div class="note-header"><span class="note-owner gege">哥哥</span><span class="note-time">${m.time}</span></div>
           <div class="note-content">${m.text}</div>
           ${m.replies.length>0 ? `<div class="reply-list">${replyList}</div>` : ''}
-          ${replyForm}
-          ${tagRow}
+          ${replyBlock}
         </div>
       </div>`;
     }).join('');
+    updateNoteRoleUI();
     initSwipeDelete('#mistakeList', '.swipe-wrap');
   };
   window.deleteMistake = function(id) {
@@ -3326,16 +3336,21 @@ window.switchSpace=function(){
     renderMistakes();
   };
   window.selectMistakeTag = function(id, tagKey) {
+    const inp = document.getElementById('mistake-reply-input-'+id);
+    const val = inp ? inp.value : '';
     const m = mistakes.find(x=>x.id===id); if(!m) return;
     m._selectedTag = tagKey;
     renderMistakes();
+    const inp2 = document.getElementById('mistake-reply-input-'+id);
+    if(inp2) inp2.value = val;
   };
   window.addMistakeReply = function(id) {
+    if(onlineRole !== 'baobao'){ showCloudToast('只有宝宝在线时才能回复'); return; }
     const input = document.getElementById('mistake-reply-input-'+id);
-    const text = input.value.trim(); if(!text) return;
+    const text = input.value.trim(); if(!text){ showCloudToast('先写上留言再发送哦'); return; }
     const m = mistakes.find(x=>x.id===id); if(!m) return;
-    const tag = m._selectedTag || null;
-    m.replies.push({text:text, time:noteTime(), tag:tag});
+    if(!m._selectedTag){ showCloudToast('请先选一个标签再发送'); return; }
+    m.replies.push({text:text, time:noteTime(), tag:m._selectedTag});
     m._selectedTag = null;
     if(window.Cloud) Cloud.mistakeSave(m);
     renderMistakes();
@@ -3349,6 +3364,7 @@ window.switchSpace=function(){
     {key:'wrong', label:'哥哥错了'},
   ];
   window.addGrudge = function() {
+    if(onlineRole !== 'baobao'){ showCloudToast('只有宝宝在线时才能记仇'); return; }
     const text = document.getElementById('grudgeText').value.trim();
     if(!text) return;
     const item={id:genId(), text:text, time:noteTime(), replies:[], tags:[]};
@@ -3366,19 +3382,22 @@ window.switchSpace=function(){
         const tagHtml = r.tag ? '<span class="tag-pill-static grudge">'+GRUDGE_TAGS.find(t=>t.key===r.tag).label+'</span>' : '';
         return '<div class="reply-card"><div class="reply-meta">哥哥 · '+r.time+'</div>'+r.text+tagHtml+'</div>';
       }).join('');
-      const replyForm = `<div class="reply-form show" id="grudge-reply-${m.id}"><input class="reply-input" id="grudge-reply-input-${m.id}" placeholder="哥哥来反思..."><button class="reply-submit" onclick="addGrudgeReply(${m.id})">发送</button></div>`;
-      const tagRow = `<div class="tag-row"><span class="tag-label">选一个：</span>${GRUDGE_TAGS.map(t=>'<button class="tag-pill grudge'+(m._selectedTag===t.key?' selected':'')+'" onclick="selectGrudgeTag('+m.id+',\''+t.key+'\')">'+t.label+'</button>').join('')}</div>`;
+      const canReply = onlineRole === 'gege';
+      const replyBlock = canReply
+        ? `<div class="reply-form show" id="grudge-reply-${m.id}"><input class="reply-input" id="grudge-reply-input-${m.id}" placeholder="哥哥来反思..."><button class="reply-submit" onclick="addGrudgeReply('${m.id}')">发送</button></div>
+           <div class="tag-row"><span class="tag-label">选一个：</span>${GRUDGE_TAGS.map(t=>'<button class="tag-pill grudge'+(m._selectedTag===t.key?' selected':'')+'" onclick="selectGrudgeTag(\''+m.id+'\',\''+t.key+'\')">'+t.label+'</button>').join('')}</div>`
+        : `<div class="reply-locked">😶 只有哥哥在线时才能回复宝宝的记仇</div>`;
       return `<div class="swipe-wrap" data-idx="${m.id}">
         <div class="swipe-delete-btn" onclick="deleteGrudge('${m.id}')">删除</div>
         <div class="swipe-card note-card note-grudge">
           <div class="note-header"><span class="note-owner baobao">宝宝</span><span class="note-time">${m.time}</span></div>
           <div class="note-content">${m.text}</div>
           ${m.replies.length>0 ? `<div class="reply-list">${replyList}</div>` : ''}
-          ${replyForm}
-          ${tagRow}
+          ${replyBlock}
         </div>
       </div>`;
     }).join('');
+    updateNoteRoleUI();
     initSwipeDelete('#grudgeList', '.swipe-wrap');
   };
   window.deleteGrudge = function(id) {
@@ -3390,20 +3409,55 @@ window.switchSpace=function(){
     renderGrudges();
   };
   window.selectGrudgeTag = function(id, tagKey) {
+    const inp = document.getElementById('grudge-reply-input-'+id);
+    const val = inp ? inp.value : '';
     const m = grudges.find(x=>x.id===id); if(!m) return;
     m._selectedTag = tagKey;
     renderGrudges();
+    const inp2 = document.getElementById('grudge-reply-input-'+id);
+    if(inp2) inp2.value = val;
   };
   window.addGrudgeReply = function(id) {
+    if(onlineRole !== 'gege'){ showCloudToast('只有哥哥在线时才能回复'); return; }
     const input = document.getElementById('grudge-reply-input-'+id);
-    const text = input.value.trim(); if(!text) return;
+    const text = input.value.trim(); if(!text){ showCloudToast('先写上留言再发送哦'); return; }
     const m = grudges.find(x=>x.id===id); if(!m) return;
-    const tag = m._selectedTag || null;
-    m.replies.push({text:text, time:noteTime(), tag:tag});
+    if(!m._selectedTag){ showCloudToast('请先选一个标签再发送'); return; }
+    m.replies.push({text:text, time:noteTime(), tag:m._selectedTag});
     m._selectedTag = null;
     if(window.Cloud) Cloud.grudgeSave(m);
     renderGrudges();
     checkAchieveRedDot();
+  };
+
+  // v3.30.10：根据在线角色启用/禁用 错题本·记仇本 的“记录”区域
+  window.updateNoteRoleUI = function() {
+    var mWrap = document.getElementById('brother-mistake');
+    if(mWrap){
+      var mOk = onlineRole==='gege';
+      var mTa = document.getElementById('mistakeText');
+      var mBtn = mWrap.querySelector('.nb-add-btn');
+      if(mTa) mTa.disabled = !mOk;
+      if(mBtn){ mBtn.disabled = !mOk; mBtn.classList.toggle('nb-locked', !mOk); }
+      var mHint = mWrap.querySelector('.notebook-add-hint');
+      if(!mOk){
+        if(!mHint){ mHint=document.createElement('div'); mHint.className='notebook-add-hint'; mBtn.parentNode.appendChild(mHint); }
+        mHint.textContent = onlineRole ? '只有哥哥在线时才能记录错题' : '请先以哥哥身份上线';
+      } else if(mHint){ mHint.remove(); }
+    }
+    var gWrap = document.getElementById('baby-grudge');
+    if(gWrap){
+      var gOk = onlineRole==='baobao';
+      var gTa = document.getElementById('grudgeText');
+      var gBtn = gWrap.querySelector('.nb-add-btn');
+      if(gTa) gTa.disabled = !gOk;
+      if(gBtn){ gBtn.disabled = !gOk; gBtn.classList.toggle('nb-locked', !gOk); }
+      var gHint = gWrap.querySelector('.notebook-add-hint');
+      if(!gOk){
+        if(!gHint){ gHint=document.createElement('div'); gHint.className='notebook-add-hint'; gBtn.parentNode.appendChild(gHint); }
+        gHint.textContent = onlineRole ? '只有宝宝在线时才能记仇' : '请先以宝宝身份上线';
+      } else if(gHint){ gHint.remove(); }
+    }
   };
 
   // ========== TIME CAPSULE ==========
