@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>哥哥我是小猫的状态</title>
-<!-- Our Home v3.30.8 -->
+<!-- Our Home v3.30.9 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -398,6 +398,15 @@
   .film-tab-label{ display:block; font-size:14px; color:var(--text); margin-bottom:6px; }
   .film-tab-count{ display:inline-block; min-width:22px; padding:2px 7px; background:var(--accent); color:#7a5c3a; font-size:13px; border-radius:11px; }
   .film-float-add{ position:fixed; right:18px; bottom:92px; border:none; background:var(--accent); color:#7a5c3a; font-family:var(--font-zh); font-size:15px; padding:12px 20px; border-radius:24px; box-shadow:0 6px 18px rgba(93,78,68,0.15); cursor:pointer; z-index:10; }
+  /* v3.30.9：家庭电影主页「添加电影 / 添加电视剧」横向双按钮组 */
+  .film-float-add-group{ position:fixed; right:18px; bottom:92px; display:flex; gap:10px; z-index:10; }
+  .film-float-add-group .film-float-add{ position:static; }
+  .film-float-add-tv{ background:#bcd3e6; color:#3f6f93; }
+  .film-float-add-tv:active{ transform:scale(0.97); }
+  /* v3.30.9：想看/在看/已看/共同观看 列表的 全部/电影/电视剧 筛选 */
+  .film-kind-tabs{ display:flex; gap:8px; margin:0 0 14px; background:#fff5ee; padding:5px; border-radius:14px; box-shadow:var(--shadow); }
+  .film-kind-tab{ flex:1; border:none; background:transparent; font-family:var(--font-zh); font-size:14px; color:var(--text-sub); padding:9px 0; border-radius:10px; cursor:pointer; transition:all .15s; }
+  .film-kind-tab.active{ background:var(--accent); color:#7a5c3a; font-weight:600; box-shadow:0 2px 8px rgba(93,78,68,0.12); }
   .modal { background:#fffaf5; border-radius:26px; padding:28px 24px; width:88vw; max-width:min(360px, calc(100% - 32px)); box-sizing:border-box; box-shadow:0 20px 60px rgba(93,78,68,0.18); animation:popIn 0.3s ease; overflow:hidden; }
   @keyframes popIn { from{opacity:0;transform:scale(0.9) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
   .modal h3 { font-family:var(--font-zh); font-size:18px; font-weight:600; margin-bottom:18px; text-align:center; }
@@ -1428,7 +1437,7 @@ const Cloud=(function(){
   async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniAdd(a){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('anniversaries',{space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},[['space_id',spaceId],['id',String(a.id)]]); if(error){console.error('Cloud anniAdd 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
-  async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:item.publisher||null,country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:(kind==='book')?(item.publisher||null):(item.duration||null),country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function mediaDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
   async function ctrlSave(r){ if(!await ensureReady()||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const error=await upsertSafe('ctrl_records',{space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},[['space_id',spaceId],['id',String(r.id)]]); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
   async function ctrlDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
@@ -1616,7 +1625,7 @@ window.switchSpace=function(){
     <div class="cloud">
       <div class="cloud-title">Our Home</div>
       <div class="cloud-sub" id="onlineBadge"><span id="onlineDot"></span></div>
-      <div class="ver-tag">v3.30.8</div>
+      <div class="ver-tag">v3.30.9</div>
     </div>
   </header>
   <div class="cloud-toast" id="cloudToast"></div>
@@ -1917,35 +1926,58 @@ window.switchSpace=function(){
           <input type="search" class="film-search-input" placeholder="搜索片名…" oninput="filterFilmMain('movie',this.value)">
         </div>
         <div class="film-tabs" id="movieTabs"></div>
-        <button class="film-float-add" onclick="openFilmModal('movie','want')">+ 添加电影</button>
+        <div class="film-float-add-group">
+          <button class="film-float-add film-float-add-movie" onclick="openFilmModal('movie','want',null,'movie')">+ 添加电影</button>
+          <button class="film-float-add film-float-add-tv" onclick="openFilmModal('movie','want',null,'tv')">+ 添加电视剧</button>
+        </div>
       </div>
       <!-- 家庭电影-想看 -->
       <div id="study-movie-want" style="display:none">
         <button class="back-btn" onclick="closeFilmList('movie','want')">&#8249; 返回家庭电影</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon">影</span>想看</div><div class="page-subtitle">待看的片单</div></div>
+        <div class="film-kind-tabs" data-mod="movie">
+          <button class="film-kind-tab active" data-kind="all" onclick="setFilmKindFilter('movie','all')">全部</button>
+          <button class="film-kind-tab" data-kind="movie" onclick="setFilmKindFilter('movie','movie')">电影</button>
+          <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
+        </div>
         <div class="film-list" id="movie-list-want"></div>
-        <button class="film-float-add" onclick="openFilmModal('movie','want')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('want')">+ 添加</button>
       </div>
       <!-- 家庭电影-在看 -->
       <div id="study-movie-watching" style="display:none">
         <button class="back-btn" onclick="closeFilmList('movie','watching')">&#8249; 返回家庭电影</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon">影</span>在看</div><div class="page-subtitle">正在追的片</div></div>
+        <div class="film-kind-tabs" data-mod="movie">
+          <button class="film-kind-tab active" data-kind="all" onclick="setFilmKindFilter('movie','all')">全部</button>
+          <button class="film-kind-tab" data-kind="movie" onclick="setFilmKindFilter('movie','movie')">电影</button>
+          <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
+        </div>
         <div class="film-list" id="movie-list-watching"></div>
-        <button class="film-float-add" onclick="openFilmModal('movie','watching')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watching')">+ 添加</button>
       </div>
       <!-- 家庭电影-已看 -->
       <div id="study-movie-watched" style="display:none">
         <button class="back-btn" onclick="closeFilmList('movie','watched')">&#8249; 返回家庭电影</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon">影</span>已看</div><div class="page-subtitle">一个人先看完了</div></div>
+        <div class="film-kind-tabs" data-mod="movie">
+          <button class="film-kind-tab active" data-kind="all" onclick="setFilmKindFilter('movie','all')">全部</button>
+          <button class="film-kind-tab" data-kind="movie" onclick="setFilmKindFilter('movie','movie')">电影</button>
+          <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
+        </div>
         <div class="film-list" id="movie-list-watched"></div>
-        <button class="film-float-add" onclick="openFilmModal('movie','watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加</button>
       </div>
       <!-- 家庭电影-共同观看 -->
       <div id="study-movie-both" style="display:none">
         <button class="back-btn" onclick="closeFilmList('movie','both')">&#8249; 返回家庭电影</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon">影</span>共同观看</div><div class="page-subtitle">我们一起看完了</div></div>
+        <div class="film-kind-tabs" data-mod="movie">
+          <button class="film-kind-tab active" data-kind="all" onclick="setFilmKindFilter('movie','all')">全部</button>
+          <button class="film-kind-tab" data-kind="movie" onclick="setFilmKindFilter('movie','movie')">电影</button>
+          <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
+        </div>
         <div class="film-list" id="movie-list-both"></div>
-        <button class="film-float-add" onclick="openFilmModal('movie','watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加</button>
       </div>
 
       <!-- 豹窝藏书主页面 -->
@@ -2089,6 +2121,11 @@ window.switchSpace=function(){
       <div class="modal-label">演员 / 主创</div>
       <input type="text" class="modal-input" id="filmCastInp" placeholder="主要演员">
     </div>
+    <!-- 片长（电影）/ 集数（电视剧）：电影与电视剧共用此行，标签随类型切换 -->
+    <div class="modal-row film-field" id="filmDurationRow">
+      <div class="modal-label" id="filmDurationLabel">片长</div>
+      <input type="text" class="modal-input" id="filmDurationInp" placeholder="如 120分钟" maxlength="20">
+    </div>
     <!-- 图书专属：作者 -->
     <div class="modal-row book-field" id="filmAuthorRow">
       <div class="modal-label">作者</div>
@@ -2209,8 +2246,13 @@ window.switchSpace=function(){
   let babyStartGameCount = 0;
   let movies = [];
   let books = [];
+  // v3.30.9：电视剧（kind='tv'）并入家庭电影模块，与电影共用电影类字段，仅片长→集数不同
+  let tvs = [];
   let filmRating = 0;
   let filmType = 'movie';
+  // filmKind：当前弹窗新增/编辑的具体类型 movie / tv / book；filmKindFilter：家庭电影列表的 全部/电影/电视剧 筛选
+  let filmKind = 'movie';
+  let filmKindFilter = 'all';
   let filmStatus = 'want';
   const filmSearch = {};
   let capsuleRole = null, wishRole = null, gameRole = null;
@@ -2254,7 +2296,10 @@ window.switchSpace=function(){
   function mapMedia(x){
     var g = (x.gege && typeof x.gege==='object') ? x.gege : {status:null,rating:0};
     var b = (x.baobao && typeof x.baobao==='object') ? x.baobao : {status:null,rating:0};
-    return {id:x.id, title:x.title, year:x.year, genre:x.genre, note:x.note, poster:x.poster, cover:x.cover, director:x.director, cast:x.cast_crew, author:x.author, publisher:x.publisher, country:x.country, gege:{status:g.status||null, rating:g.rating||0, review:g.review||''}, baobao:{status:b.status||null, rating:b.rating||0, review:b.review||''}, time:x.time};
+    var _kind = x.kind || 'movie';
+    // v3.30.9：片长/集数无独立列，movie/tv 复用 publisher 列持久化；内存统一用 duration 字段
+    var _duration = (_kind==='book') ? '' : (x.duration || x.publisher || '');
+    return {id:x.id, title:x.title, year:x.year, genre:x.genre, note:x.note, poster:x.poster, cover:x.cover, director:x.director, cast:x.cast_crew, author:x.author, publisher:x.publisher, country:x.country, kind:_kind, duration:_duration, gege:{status:g.status||null, rating:g.rating||0, review:g.review||''}, baobao:{status:b.status||null, rating:b.rating||0, review:b.review||''}, time:x.time};
   }
 
   // 实时回调：某表在云端发生变更后，拉取该表最新数据并刷新对应界面
@@ -2314,6 +2359,10 @@ window.switchSpace=function(){
         var bMerged = rows.filter(function(x){return x.kind==='book';}).map(mapMedia);
         books.filter(function(x){ return x && x.id && !mCloudIds[x.id]; }).forEach(function(x){ bMerged.push(x); });
         books = bMerged;
+        // v3.30.9：电视剧并入家庭电影模块
+        var tMerged = rows.filter(function(x){return x.kind==='tv';}).map(mapMedia);
+        tvs.filter(function(x){ return x && x.id && !mCloudIds[x.id]; }).forEach(function(x){ tMerged.push(x); });
+        tvs = tMerged;
         if(typeof refreshFilmViews==='function') refreshFilmViews(filmType);
       }
       else if(table==='anniversaries'){ anniversaries = rows.map(function(a){ return {id:a.id, title:a.title, date:a.date, type:a.type}; }); if(typeof renderAnniversaries==='function') renderAnniversaries(); }
@@ -2462,6 +2511,9 @@ window.switchSpace=function(){
             movies = d.media.filter(function(x){return x.kind==='movie';}).map(mapMedia).concat(mLocal);
             var bLocal = books.filter(function(x){ return x && x.id && !cloudMediaIds[x.id]; });
             books = d.media.filter(function(x){return x.kind==='book';}).map(mapMedia).concat(bLocal);
+            // v3.30.9：电视剧并入家庭电影模块
+            var tLocal = tvs.filter(function(x){ return x && x.id && !cloudMediaIds[x.id]; });
+            tvs = d.media.filter(function(x){return x.kind==='tv';}).map(mapMedia).concat(tLocal);
           }
           if(d.ctrls && d.ctrls.length){
             var cloudCtrls = d.ctrls.map(function(r){ return {id:r.id, role:r.role, startTime:r.start_time, endTime:r.end_time, duration:r.duration, isOffline:r.is_offline}; });
@@ -2837,35 +2889,43 @@ window.switchSpace=function(){
     });
   }
   var editingFilmId = null;
-  window.openFilmModal = function(type,status,id){
+  // v3.30.9：openFilmModal 增加 kind 参数（movie/tv/book）；TV 走电影类字段，仅片长→集数不同
+  window.openFilmModal = function(type,status,id,kind){
     filmType=type;
+    var item = id ? findFilm(type,id) : null;
+    filmKind = kind || (item ? (item.kind||(type==='book'?'book':'movie')) : (type==='book'?'book':'movie'));
     editingFilmId = id || null;
     var modal = document.getElementById('filmModal');
     var modalInner = modal.querySelector('.modal');
-    // Toggle field visibility via class
+    // Toggle field visibility via class（TV 与电影共用电影类字段）
     modalInner.classList.remove('film-modal-movie','film-modal-book');
-    modalInner.classList.add(type==='movie'?'film-modal-movie':'film-modal-book');
+    modalInner.classList.add(type==='book' ? 'film-modal-book' : 'film-modal-movie');
     // Update "both" pill label
     var bothPill = document.getElementById('filmBothPill');
-    bothPill.textContent = type==='movie' ? '共同已看' : '共同阅读';
+    bothPill.textContent = type==='book' ? '共同阅读' : '共同已看';
+    // 片长 / 集数 标签切换
+    var durLabel = document.getElementById('filmDurationLabel');
+    var durInp = document.getElementById('filmDurationInp');
+    if(durLabel) durLabel.textContent = (filmKind==='tv') ? '集数' : '片长';
+    if(durInp) durInp.placeholder = (filmKind==='tv') ? '如 40集' : '如 120分钟';
     // Clear all inputs
-    ['filmCoverInp','filmTitleInp','filmDirectorInp','filmCastInp','filmAuthorInp','filmPublisherInp','filmYearInp','filmGenreInp','filmCountryInp','filmNoteInp','filmReviewInp'].forEach(function(idStr){
+    ['filmCoverInp','filmTitleInp','filmDirectorInp','filmCastInp','filmAuthorInp','filmPublisherInp','filmYearInp','filmGenreInp','filmCountryInp','filmNoteInp','filmReviewInp','filmDurationInp'].forEach(function(idStr){
       var el = document.getElementById(idStr);
       if(el) el.value = '';
     });
     var titleInp = document.getElementById('filmTitleInp');
     titleInp.disabled = false;
     if(id){
-      var item = findFilm(type,id);
-      document.getElementById('filmModalTitle').textContent='编辑'+(type==='movie'?'电影':'图书');
+      document.getElementById('filmModalTitle').textContent='编辑'+((filmKind==='book')?'图书':(filmKind==='tv'?'电视剧':'电影'));
       titleInp.value = item.title || '';
       titleInp.disabled = false;
-      document.getElementById('filmCoverInp').value = type==='movie' ? (item.poster||'') : (item.cover||'');
+      document.getElementById('filmCoverInp').value = (filmKind==='book') ? (item.cover||'') : (item.poster||'');
       document.getElementById('filmYearInp').value = item.year || '';
       document.getElementById('filmGenreInp').value = item.genre || '';
       document.getElementById('filmNoteInp').value = item.note || '';
       document.getElementById('filmReviewInp').value = (item[onlineRole] && item[onlineRole].review) || '';
-      if(type==='movie'){
+      document.getElementById('filmDurationInp').value = (filmKind!=='book') ? (item.duration||'') : '';
+      if(filmKind!=='book'){
         document.getElementById('filmDirectorInp').value = item.director || '';
         document.getElementById('filmCastInp').value = item.cast || '';
         document.getElementById('filmCountryInp').value = item.country || '';
@@ -2882,7 +2942,7 @@ window.switchSpace=function(){
       filmRating = my.rating || 0;
       selectFilmStatus(initStatus);
     } else {
-      document.getElementById('filmModalTitle').textContent='添加'+(type==='movie'?'电影':'图书');
+      document.getElementById('filmModalTitle').textContent='添加'+((filmKind==='book')?'图书':(filmKind==='tv'?'电视剧':'电影'));
       titleInp.value='';
       titleInp.disabled = false;
       filmRating = 0;
@@ -2904,8 +2964,13 @@ window.switchSpace=function(){
     editingFilmId = null;
   };
   function findFilm(type,id){
-    var arr = type==='movie'?movies:books;
-    return arr.find(function(x){ return String(x.id)===String(id); });
+    // v3.30.9：家庭电影模块（type='movie'）同时检索 movies 与 tvs
+    var arrs = type==='movie' ? [movies, tvs] : [books];
+    for(var a=0;a<arrs.length;a++){
+      var it = arrs[a].find(function(x){ return x && String(x.id)===String(id); });
+      if(it) return it;
+    }
+    return null;
   }
   window.saveFilm = function(){
     var title=document.getElementById('filmTitleInp').value.trim();
@@ -2914,21 +2979,22 @@ window.switchSpace=function(){
     var coverUrl=document.getElementById('filmCoverInp').value.trim();
     var year=document.getElementById('filmYearInp').value.trim();
     var genre=document.getElementById('filmGenreInp').value.trim();
+    var duration=document.getElementById('filmDurationInp').value.trim();
     var status=filmStatus;
     var rating = (status==='watched'||status==='both') ? filmRating : 0;
-    var arr = filmType==='movie'?movies:books;
     if(editingFilmId){
-      var item = arr.find(function(x){ return String(x.id)===String(editingFilmId); });
+      var item = findFilm(filmType, editingFilmId);
       if(!item) return;
       item.title = title || item.title;
       item.note = note;
       item.year = year;
       item.genre = genre;
-      if(filmType==='movie'){
+      if(filmKind!=='book'){
         item.poster = coverUrl;
         item.director = document.getElementById('filmDirectorInp').value.trim();
         item.cast = document.getElementById('filmCastInp').value.trim();
         item.country = document.getElementById('filmCountryInp').value.trim();
+        item.duration = duration;
       } else {
         item.cover = coverUrl;
         item.author = document.getElementById('filmAuthorInp').value.trim();
@@ -2947,13 +3013,15 @@ window.switchSpace=function(){
       if(!title) return;
       var item = {
         id:Date.now(), title:title, year:year, genre:genre, note:note, time:filmTime(),
+        kind:filmKind, duration:(filmKind!=='book')?duration:'',
         gege:{status:null,rating:0,review:''}, baobao:{status:null,rating:0,review:''}
       };
-      if(filmType==='movie'){
+      if(filmKind!=='book'){
         item.poster = coverUrl;
         item.director = document.getElementById('filmDirectorInp').value.trim();
         item.cast = document.getElementById('filmCastInp').value.trim();
         item.country = document.getElementById('filmCountryInp').value.trim();
+        item.duration = duration;
       } else {
         item.cover = coverUrl;
         item.author = document.getElementById('filmAuthorInp').value.trim();
@@ -2968,15 +3036,17 @@ window.switchSpace=function(){
       } else {
         item[onlineRole] = {status:status, rating:rating, review: review};
       }
-      arr.unshift(item);
+      if(filmKind==='tv') tvs.unshift(item);
+      else if(filmKind==='movie') movies.unshift(item);
+      else books.unshift(item);
     }
-    if(window.Cloud) Cloud.mediaSave(item, filmType);
+    if(window.Cloud) Cloud.mediaSave(item, filmKind);
     closeFilmModal();
     refreshFilmViews(filmType);
   };
   window.delFilm = function(id){
-    [movies,books].forEach(function(arr){
-      var i=arr.findIndex(function(x){ return String(x.id)===String(id); });
+    [movies,books,tvs].forEach(function(arr){
+      var i=arr.findIndex(function(x){ return x && String(x.id)===String(id); });
       if(i>-1) arr.splice(i,1);
     });
     if(window.Cloud) Cloud.mediaDelete(id);
@@ -2987,7 +3057,7 @@ window.switchSpace=function(){
     renderFilmMain(type);
   };
   function countFilms(type,status,kw){
-    var arr = type==='movie'?movies:books;
+    var arr = type==='movie'?movies.concat(tvs):books;
     var q = (kw||'').toLowerCase().trim();
     return arr.filter(function(d){
       if(q){
@@ -3024,6 +3094,23 @@ window.switchSpace=function(){
       if(page && page.style.display==='block') renderFilmList(type,t.key);
     });
   }
+  // v3.30.9：家庭电影列表的 全部/电影/电视剧 筛选
+  window.setFilmKindFilter = function(type, kind){
+    filmKindFilter = kind;
+    // 同步更新该模块下所有子页的筛选条高亮（避免跨页状态不一致）
+    document.querySelectorAll('.film-kind-tabs').forEach(function(container){
+      if(container.getAttribute('data-mod')!==type) return;
+      container.querySelectorAll('.film-kind-tab').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-kind')===kind);
+      });
+    });
+    refreshFilmViews(type);
+  };
+  // v3.30.9：子页「+ 添加」按当前筛选决定新增电影 / 电视剧（图书模块恒为 book）
+  window.openFilmAddFromList = function(status){
+    var kind = (filmType==='book') ? 'book' : (filmKindFilter==='tv' ? 'tv' : 'movie');
+    openFilmModal(filmType, status, null, kind);
+  };
   function starStatic(r){
     if(!r) return '';
     var s='';
@@ -3035,7 +3122,12 @@ window.switchSpace=function(){
     return '<span class="star-static">'+s+'<span class="star-num">'+(r*2).toFixed(1)+'</span></span>';
   }
   function renderFilmList(type,status){
-    var arr = type==='movie'?movies:books;
+    // v3.30.9：家庭电影模块合并 movies+tvs，并按 全部/电影/电视剧 筛选
+    var baseArr = type==='movie' ? movies.concat(tvs) : books;
+    var arr = baseArr;
+    if(type==='movie' && filmKindFilter && filmKindFilter!=='all'){
+      arr = baseArr.filter(function(d){ return (d.kind||'movie')===filmKindFilter; });
+    }
     var kw = filmSearch[type+'-main']||'';
     var q = kw.toLowerCase().trim();
     var items = arr.filter(function(d){
@@ -3062,6 +3154,7 @@ window.switchSpace=function(){
         if(d.director) metaParts.push(esc(d.director));
         if(d.genre) metaParts.push(esc(d.genre));
         if(d.country) metaParts.push(esc(d.country));
+        if(d.duration) metaParts.push((d.kind==='tv'?'集数 ':'片长 ')+esc(d.duration));
       } else {
         if(d.author) metaParts.push(esc(d.author));
         if(d.publisher) metaParts.push(esc(d.publisher));
@@ -3087,7 +3180,7 @@ window.switchSpace=function(){
       var noteHtml = d.note ? '<div class="film-card-note">'+esc(d.note)+'</div>' : '';
       var html = '<div class="film-swipe-wrap" data-id="'+d.id+'" data-type="'+type+'">';
       html += '<div class="film-swipe-actions">';
-      html += '<button class="film-swipe-edit-btn" onclick="event.stopPropagation();openFilmModal(\''+type+'\',null,'+d.id+')">编辑</button>';
+      html += '<button class="film-swipe-edit-btn" onclick="event.stopPropagation();openFilmModal(\''+type+'\',null,'+d.id+',\''+d.kind+'\')">编辑</button>';
       html += '<button class="film-swipe-delete-btn" onclick="event.stopPropagation();delFilm('+d.id+')">删除</button>';
       html += '</div>';
       html += '<div class="film-card">';
