@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>哥哥我是小猫的状态</title>
-<!-- Our Home v3.30.10 -->
+<!-- Our Home v3.30.12 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <!-- 皮肤字体：英文 Playfair Display SC / 中文 澹雅明体(DYming，ZSFT) + Noto Serif SC 兜底 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -332,7 +332,17 @@
   .film-card-title { font-family:var(--font-zh); font-size:17px; font-weight:600; color:var(--text); }
   .film-card-title-year { font-family:var(--font-en); font-size:13px; color:var(--text-sub); margin-left:6px; }
   .film-card-meta { font-family:var(--font-zh); font-size:12px; color:var(--text-sub); line-height:1.4; }
-  .film-card-status-row { display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap; }
+  /* v3.30.12：每个用户一个整体 — 顶行(已看+评分) / 评价另起一行(全宽) / 时间独立底部 */
+  .film-card-status { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+  .film-card-user { display:flex; flex-direction:column; gap:3px; }
+  .film-card-user-row { display:flex; align-items:center; gap:6px; }
+  .film-status-name { font-family:var(--font-zh); font-size:12px; font-weight:600; }
+  .film-status-name.gege { color:#5d8aa8; }
+  .film-status-name.baobao { color:#d49aab; }
+  .film-card-user-review { font-family:var(--font-zh); font-size:12px; color:var(--text); line-height:1.5; padding:3px 0 3px 8px; border-left:3px solid var(--accent); }
+  .film-card-user.gege .film-card-user-review { border-left-color:#5d8aa8; }
+  .film-card-user.baobao .film-card-user-review { border-left-color:#d49aab; }
+  .film-card-user-review .review-by { font-weight:600; color:var(--text-sub); }
   .film-card-status-pill {
     display:inline-block; padding:2px 8px; border-radius:10px;
     font-family:var(--font-zh); font-size:11px; font-weight:600;
@@ -342,10 +352,7 @@
   .film-card-status-pill.watched{background:rgba(233,198,168,0.25);color:#7a5c3a}
   .film-card-status-pill.both{background:rgba(249,199,79,0.2);color:#7a5c18}
   .film-card-note { font-family:var(--font-zh); font-size:12px; color:var(--text-sub); margin-top:2px; }
-  .film-card-review { font-family:var(--font-zh); font-size:12px; color:var(--text); margin-top:2px; background:rgba(255,255,255,0.45); border-left:3px solid var(--accent); padding:4px 8px; border-radius:0 8px 8px 0; line-height:1.5; }
-  .film-card-review .review-by { font-weight:600; color:var(--text-sub); }
-  .film-card-review-gege { border-left-color:#5d8aa8; }
-  .film-card-review-baobao { border-left-color:#d49aab; }
+  .film-card-time { font-family:var(--font-en); font-size:11px; color:var(--text-sub); margin-top:6px; opacity:0.85; }
 
   /* 电影/图书条目左滑 */
   .film-swipe-wrap { position:relative; border-radius:20px; overflow:hidden; }
@@ -3169,19 +3176,25 @@ window.switchSpace=function(){
       var metaHtml = metaParts.length ? '<div class="film-card-meta">'+metaParts.join(' · ')+'</div>' : '';
       // Year
       var yearHtml = d.year ? '<span class="film-card-title-year">('+esc(d.year)+')</span>' : '';
-      // 状态 + 各自评分/评价（哥哥、宝宝分别展示）
-      var statusRowHtml = '<div class="film-card-status-row">';
+      // v3.30.12：每个用户是一个整体——顶行(已看+评分)，评价另起一行(全宽)
+      var statusHtml = '<div class="film-card-status">';
       ['gege','baobao'].forEach(function(role){
         var p = d[role] || {status:null, rating:0, review:''};
-        if(p.status){
-          var pillClass = (d.gege.status==='watched' && d.baobao.status==='watched') ? 'both' : p.status;
-          var roleName = role==='gege' ? '哥哥' : '宝宝';
-          statusRowHtml += '<span class="film-card-status-pill '+pillClass+'">'+roleName+'：'+statusLabel(p.status)+'</span>';
-          if(p.rating) statusRowHtml += starStatic(p.rating);
-          if(p.review) statusRowHtml += '<div class="film-card-review film-card-review-'+role+'"><span class="review-by">'+roleName+'说：</span>'+esc(p.review)+'</div>';
-        }
+        if(!p.status) return;
+        var roleName = role==='gege' ? '哥哥' : '宝宝';
+        var pillClass = (d.gege.status==='watched' && d.baobao.status==='watched') ? 'both' : p.status;
+        statusHtml += '<div class="film-card-user '+role+'">';
+        statusHtml += '<div class="film-card-user-row">';
+        statusHtml += '<span class="film-status-name '+role+'">'+roleName+'</span>';
+        statusHtml += '<span class="film-card-status-pill '+pillClass+'">'+statusLabel(p.status)+'</span>';
+        if(p.rating) statusHtml += starStatic(p.rating);
+        statusHtml += '</div>';
+        if(p.review) statusHtml += '<div class="film-card-user-review"><span class="review-by">评价：</span>'+esc(p.review)+'</div>';
+        statusHtml += '</div>';
       });
-      statusRowHtml += '</div>';
+      statusHtml += '</div>';
+      // 首次添加时间（实时记录，第一次添加时写入），作为卡片底部独立一行
+      var timeHtml = d.time ? '<div class="film-card-time">添加于 '+esc(d.time)+'</div>' : '';
       // Note
       var noteHtml = d.note ? '<div class="film-card-note">'+esc(d.note)+'</div>' : '';
       var html = '<div class="film-swipe-wrap" data-id="'+d.id+'" data-type="'+type+'">';
@@ -3194,8 +3207,9 @@ window.switchSpace=function(){
       html += '<div class="film-card-info">';
       html += '<div class="film-card-title">'+esc(d.title)+yearHtml+'</div>';
       html += metaHtml;
-      html += statusRowHtml;
+      html += statusHtml;
       html += noteHtml;
+      html += timeHtml;
       html += '</div>';
       html += '</div>';
       html += '</div>';
