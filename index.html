@@ -1448,15 +1448,15 @@ const Cloud=(function(){
   async function grudgeSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('grudges',{space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud grudgeSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniAdd(a){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('anniversaries',{space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},[['space_id',spaceId],['id',String(a.id)]]); if(error){console.error('Cloud anniAdd 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
-  async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
+  async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
   async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:(kind==='book')?(item.publisher||null):(item.duration||null),country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
-  async function mediaDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
+  async function mediaDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
   async function ctrlSave(r){ if(!await ensureReady()||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const error=await upsertSafe('ctrl_records',{space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},[['space_id',spaceId],['id',String(r.id)]]); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
-  async function ctrlDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
+  async function ctrlDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
   // v3.30.6：留言/记仇/错题 的云端删除（为左滑删除功能补齐）
-  async function messageDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('messages').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud messageDelete 失败:',error.message); }
-  async function grudgeDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('grudges').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud grudgeDelete 失败:',error.message); }
-  async function mistakeDelete(id){ if(!await ensureReady()||!spaceId)return; const {error}=await sb.from('mistakes').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mistakeDelete 失败:',error.message); }
+  async function messageDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('messages').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud messageDelete 失败:',error.message); }
+  async function grudgeDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('grudges').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud grudgeDelete 失败:',error.message); }
+  async function mistakeDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('mistakes').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mistakeDelete 失败:',error.message); }
   // v3.30.5：iOS Safari 下 Supabase 的 .upsert({onConflict}) 会因 Prefer 头 + on_conflict 查询参数组合触发 “Failed to fetch”（類型錯誤:加載失敗）；
   // 留言模块用 .insert() 正常，其余模块均用 upsert 故报错。统一改走“先插后更”的兼容写法：优先 insert（POST，iOS 安全），遇到唯一冲突(23505)再 update，规避 iOS 该问题。
   async function upsertSafe(table, payload, conflict){
@@ -2275,7 +2275,21 @@ window.switchSpace=function(){
   let calYear = 2026, calMonth = 7;
   let selectedMoodRole = null, selectedMoodKey = null, selectedCalDate = null;
   let msgRole = null;
-  function genId(){ try{ if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID(); }catch(e){} return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); }
+  // v3.30.8：兜底也必须产出合法 uuid，否则 Supabase 的 uuid 列会报 "invalid input syntax for type uuid"
+  function genUUID(){
+    if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    if(window.crypto && window.crypto.getRandomValues){
+      const b=new Uint8Array(16);
+      window.crypto.getRandomValues(b);
+      b[6]=(b[6]&0x0f)|0x40;
+      b[8]=(b[8]&0x3f)|0x80;
+      const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+      return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){ const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); });
+  }
+  function genId(){ return genUUID(); }
+  function isUUID(s){ return typeof s==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s); }
 
   // 控制狂：在线计时
   let ctrlStartTime = null;
@@ -3282,7 +3296,7 @@ window.switchSpace=function(){
     if(!onlineRole){ return; }
     const text = document.getElementById('msgTextarea').value.trim();
     if(!text) return;
-    const msgId = (typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Date.now()+'_'+Math.random().toString(36).slice(2,10));
+    const msgId = genUUID();
     messages.unshift({id:msgId, role:onlineRole, text:text, time:new Date().toISOString(), date:todayKey()});
     renderMessages();
     document.getElementById('msgTextarea').value='';
