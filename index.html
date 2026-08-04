@@ -2,11 +2,16 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-title" content="Eden">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#F3E0D8">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="images/app-icon.png">
+<link rel="icon" href="images/app-icon.png" type="image/png">
 <title>哥哥我是小猫的状态</title>
 <!-- Our Home v3.30.12 -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
@@ -37,13 +42,37 @@
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
+    position:fixed; top:0; left:0;
     width:100%; height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    -webkit-text-size-adjust:100%;
     font-family:var(--font-zh);
     color:var(--text);
     background:var(--bg);
-    overflow:hidden;
     -webkit-font-smoothing:antialiased;
     -webkit-tap-highlight-color:transparent;
+  }
+  /* 全局禁用文本选中 / 长按系统菜单（输入框除外），移除点击灰蓝遮罩 */
+  *:not(input):not(textarea):not([contenteditable]) {
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  /* PWA 原生点击反馈：轻点回弹 */
+  button:active,
+  .bn-item:active,
+  .msg-role-btn:active,
+  .anni-add-btn:active,
+  .ctrl-refresh-btn:active,
+  .space-btn:active,
+  .film-float-add-main:active,
+  .tag-pill:active,
+  .anni-card:active,
+  .swipe-card:active {
+    opacity:0.75;
+    transform:scale(0.98);
+    transition:transform 0.1s ease, opacity 0.1s ease;
   }
 
 
@@ -125,7 +154,7 @@
 
   .top-header {
     position:fixed; top:0; left:0; right:0; z-index:100;
-    height:var(--top-h); display:flex; align-items:center; justify-content:center; padding-top:24px;
+    height:calc(var(--top-h) + env(safe-area-inset-top, 0)); display:flex; align-items:center; justify-content:center; padding-top:calc(env(safe-area-inset-top, 0) + 22px);
   }
   .cloud {
     position:relative; width:min(320px,80vw); height:78px;
@@ -146,23 +175,27 @@
   .space-chip .sc-code { font-family:var(--font-en); font-weight:600; letter-spacing:1px; }
   .space-chip .sc-switch { margin-left:4px; padding-left:7px; border-left:1px solid rgba(176,106,130,0.4); color:#8a6a76; font-size:11px; }
   .space-chip .sc-switch:hover { color:#b06a82; }
-  /* 云端同步成功提示 */
-  .cloud-toast { position:fixed; left:50%; bottom:84px; transform:translateX(-50%) translateY(20px); background:rgba(93,138,168,0.95); color:#fff; font-family:var(--font-zh); font-size:13px; padding:9px 18px 9px 34px; border-radius:999px; box-shadow:0 6px 20px rgba(93,138,168,0.4); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:9999; }
-  .cloud-toast::before{
-    content:''; position:absolute; left:15px; top:50%; width:14px; height:14px; margin-top:-7px;
-    background-color:#fff;
-    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/contain no-repeat;
-    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/contain no-repeat;
-  }
-  .cloud-toast.err::before{
-    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'/%3E%3C/svg%3E") center/contain no-repeat;
-    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'/%3E%3C/svg%3E") center/contain no-repeat;
+  /* 全局轻提示（莫兰迪手账风） */
+  .cloud-toast {
+    position:fixed; left:50%; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0) + 24px);
+    transform:translateX(-50%) translateY(10px);
+    max-width:84vw; padding:11px 22px;
+    background:rgba(108, 91, 91, 0.88);
+    color:#FFFFFF;
+    font-family:var(--font-zh); font-size:13px; letter-spacing:0.5px;
+    border:1px solid rgba(210, 190, 180, 0.4);
+    border-radius:24px;
+    box-shadow:0 4px 12px rgba(0, 0, 0, 0.08);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+    z-index:9999; text-align:center; white-space:normal;
   }
   .cloud-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-  .cloud-toast.err { background:rgba(192,106,106,0.96); box-shadow:0 6px 20px rgba(192,106,106,0.42); max-width:84vw; white-space:normal; text-align:center; }
+  .cloud-toast.err { background:rgba(158, 107, 107, 0.92); border-color:rgba(210, 190, 180, 0.45); }
 
   .main {
-    flex:1; margin-top:var(--top-h); margin-bottom:var(--nav-h);
+    flex:1; margin-top:calc(var(--top-h) + env(safe-area-inset-top, 0)); margin-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0));
     overflow-y:auto; overflow-x:hidden; padding:12px 20px 24px; position:relative;
   }
   .main::-webkit-scrollbar { width:0; }
@@ -2859,14 +2892,14 @@ window.switchSpace=function(){
     const t=document.getElementById('cloudToast'); if(!t) return;
     t.textContent=msg; t.classList.add('show');
     clearTimeout(window.__cloudToastT);
-    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show'); }, 1800);
+    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show'); }, 1500);
   }
   // v3.30.4：失败用红提示，并把真实错误显示出来
   function showCloudError(msg){
     const t=document.getElementById('cloudToast'); if(!t) return;
-    t.textContent=' '+msg; t.classList.add('show','err');
+    t.textContent=msg; t.classList.add('show','err');
     clearTimeout(window.__cloudToastT);
-    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show','err'); }, 3800);
+    window.__cloudToastT=setTimeout(function(){ t.classList.remove('show','err'); }, 2400);
   }
   // v3.30.4：统一接收云端写入结果——成功弹绿提示，失败弹红提示，不再静默丢数据
   function registerCloudResult(){
