@@ -44,10 +44,10 @@
   html, body {
     position:fixed; top:0; left:0;
     width:100%; height:100%;
-    height:100vh; height:-webkit-fill-available;
+    height:100vh; height:-webkit-fill-available; height:100dvh;
     margin:0; padding:0;
     overflow:hidden;
-    overscroll-behavior:none;
+    overscroll-behavior:none; overscroll-behavior-y:none;
     -webkit-text-size-adjust:100%;
     font-family:var(--font-zh);
     color:var(--text);
@@ -143,13 +143,13 @@
                       repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(93,78,68,0.015) 35px, rgba(93,78,68,0.015) 70px);
     pointer-events:none;
   }
-  .splash-top { position:relative; z-index:2; text-align:center; width:100%; padding-top:calc(40px + env(safe-area-inset-top, 0)); filter:blur(8px); opacity:0; transform:scale(0.98); transition:filter 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); }
+  .splash-top { position:absolute; top:calc(16px + env(safe-area-inset-top, 0)); left:0; z-index:2; text-align:center; width:100%; filter:blur(8px); opacity:0; transform:scale(0.98); transition:filter 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); }
   .splash-top.in { filter:blur(0); opacity:1; transform:scale(1); }
   .splash-brand { text-shadow:0 0 12px rgba(210,170,170,0.35); animation:softFloat 5s ease-in-out infinite, softBreathe 4s ease-in-out infinite; }
   .splash-mid { position:relative; z-index:2; flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
-  .splash-bottom { position:relative; z-index:2; padding-bottom:calc(20px + env(safe-area-inset-bottom, 0)); font-family:var(--font-en); font-size:12px; letter-spacing:1.5px; color:var(--text-sub); opacity:0.65; }
+  .splash-bottom { display:none; }
   .splash-title { font-family:var(--font-en); font-size:clamp(44px,10vw,64px); font-weight:600; color:var(--text); letter-spacing:1px; line-height:1; }
-  .splash-sub { font-family:var(--font-zh); font-size:clamp(18px,4vw,24px); color:var(--text-sub); margin-top:16px; display:inline-block; animation:slowWiggle 4s ease-in-out infinite; }
+  .splash-sub { font-family:var(--font-zh); font-size:clamp(18px,4vw,24px); color:var(--text-sub); margin-top:10px; display:inline-block; animation:slowWiggle 4s ease-in-out infinite; }
   @keyframes slowWiggle { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
   @keyframes softBreathe { 0%,100%{opacity:0.85} 50%{opacity:1} }
   @keyframes softFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
@@ -204,8 +204,8 @@
   .cloud-toast.err { background:rgba(158, 107, 107, 0.92); border-color:rgba(210, 190, 180, 0.45); }
 
   .main {
-    flex:1; margin-top:calc(var(--top-h) + env(safe-area-inset-top, 0)); margin-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0));
-    overflow-y:auto; overflow-x:hidden; padding:12px 20px calc(60px + env(safe-area-inset-bottom, 0)); position:relative;
+    flex:1; margin-top:calc(var(--top-h) + env(safe-area-inset-top, 0)); margin-bottom:var(--nav-h);
+    overflow-y:auto; overflow-x:hidden; padding:12px 20px 24px; position:relative;
   }
   .main::-webkit-scrollbar { width:0; }
   .page { display:none; animation:fadeIn 0.4s ease; }
@@ -1070,11 +1070,13 @@
   /* Bottom nav */
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; z-index:200;
-    height:var(--nav-h); background:rgba(255,252,248,0.95);
+    min-height:var(--nav-h); height:auto;
+    background:rgba(255,252,248,0.95);
     backdrop-filter:blur(16px); border-top:1px solid var(--border);
     display:flex; justify-content:space-around; align-items:center;
-    padding:0 10px; padding-bottom:max(12px, env(safe-area-inset-bottom, 0));
+    padding:8px 10px; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0));
   }
+  .bottom-nav::after { content:''; position:absolute; bottom:0; left:0; right:0; height:env(safe-area-inset-bottom, 0px); background:inherit; pointer-events:none; }
   .bn-item {
     display:flex; flex-direction:column; align-items:center; gap:4px;
     padding:5px 2px; background:none; border:none; cursor:pointer;
