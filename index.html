@@ -37,22 +37,35 @@
     --font-zh: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
     --nav-h: 72px;
     --top-h: 104px;
+    --page-bg: #FFF9F7;
     /* 纯 CSS 重绘的五角星形状（替代被移除的星标字形） */
     --star-clip: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body {
-    position:fixed; inset:0;
+
+  /* ====== 根容器：PWA 全屏安全底色（杜绝底部白条）====== */
+  html {
+    position:fixed; top:0; left:0; right:0; bottom:0;
     width:100%; height:100%;
     height:100vh; height:-webkit-fill-available; height:100dvh;
+    overflow:hidden;
+    background:var(--page-bg);
+    -webkit-text-size-adjust:100%;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* 安全网：html 的 ::before 绝对铺满，兜底任何渲染间隙 */
+  html::before {
+    content:''; position:fixed; inset:0;
+    background:var(--page-bg); z-index:-9999; pointer-events:none;
+  }
+  body {
+    width:100%; height:100%;
     margin:0; padding:0;
     overflow:hidden;
     overscroll-behavior:none; overscroll-behavior-y:none;
-    -webkit-text-size-adjust:100%;
     font-family:var(--font-zh);
     color:var(--text);
-    background:#FFF9F7;
-    -webkit-font-smoothing:antialiased;
+    background:transparent;
     -webkit-tap-highlight-color:transparent;
   }
   /* 全局禁用文本选中 / 长按系统菜单（输入框除外），移除点击灰蓝遮罩 */
@@ -128,9 +141,8 @@
   .online-badge.baobao { color:#d49aab; }
 
   .splash {
-    position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; z-index:9999;
-    height:100vh; height:100dvh; min-height:-webkit-fill-available;
-    margin:0; padding:0; padding-bottom:env(safe-area-inset-bottom, 0);
+    position:fixed; inset:0; width:100vw; z-index:9999;
+    margin:0; padding:0; padding-bottom:env(safe-area-inset-bottom, 0px);
     background: radial-gradient(circle at 20% 30%, rgba(233,198,168,0.25) 0%, transparent 40%),
                 radial-gradient(circle at 80% 70%, rgba(212,227,207,0.25) 0%, transparent 40%),
                 linear-gradient(135deg, #f8f3ec 0%, #f0e8df 100%);
@@ -149,7 +161,7 @@
   .splash-top.in { filter:blur(0); opacity:1; transform:scale(1); }
   .splash-brand { text-shadow:0 0 12px rgba(210,170,170,0.35); animation:softFloat 5s ease-in-out infinite, softBreathe 4s ease-in-out infinite; }
   .splash-mid { position:relative; z-index:2; flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
-  .splash-bottom { display:none; }
+  .splash-bottom { display:none !important; visibility:hidden !important; height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
   .splash-title { font-family:var(--font-en); font-size:clamp(44px,10vw,64px); font-weight:600; color:var(--text); letter-spacing:1px; line-height:1; }
   .splash-sub { font-family:var(--font-zh); font-size:clamp(18px,4vw,24px); color:var(--text-sub); margin-top:10px; display:inline-block; animation:slowWiggle 4s ease-in-out infinite; }
   @keyframes slowWiggle { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
@@ -1069,14 +1081,21 @@
 .achieve-section .achieve-card { margin-bottom:0; }
 .achieve-section .achieve-group-title + .achieve-card { margin-top:0; }
 
-  /* Bottom nav */
+  /* Bottom nav —— 底色延伸至屏幕物理最底端，杜绝 PWA 白条 */
   .bottom-nav {
     position:fixed; bottom:0; left:0; right:0; z-index:200;
     min-height:var(--nav-h); height:auto;
     background:#FFF9F7;
     backdrop-filter:blur(16px); border-top:1px solid var(--border);
     display:flex; justify-content:space-around; align-items:center;
-    padding:8px 10px; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0));
+    padding:8px 10px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    /* 安全网：::after 延伸底色到手势区最底，防止任何渲染间隙透白 */
+  }
+  .bottom-nav::after {
+    content:''; position:absolute; bottom:0; left:0; right:0;
+    height:env(safe-area-inset-bottom, 0px);
+    background:#FFF9F7; pointer-events:none;
   }
   .bn-item {
     display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -1515,9 +1534,12 @@
   }
   /* 渗色修复：覆盖 skin 的 background 简写（它会把 background-size 重置为 auto），确保手账纸纹底图无缝铺满全屏、消除底部白块 */
   .splash {
+    position:fixed; inset:0;
     background-size:cover; background-position:center; background-repeat:no-repeat;
-    padding-bottom:env(safe-area-inset-bottom, 0);
+    padding-bottom:env(safe-area-inset-bottom, 0px);
   }
+  /* 彻底隐藏底部文字（PWA 模式下任何残留元素都会导致视觉问题） */
+  .splash-bottom { display:none !important; visibility:hidden !important; height:0 !important; overflow:hidden !important; }
   /* 隐藏原手绘纸纹三层 + 蕾丝边框 + 四角藤蔓 + 漂浮光点（保留纯色底） */
   .splash-texture, .splash-paper-fiber, .splash-paper-stain,
   .splash-lace-frame, .splash-corner, .splash-sparkle{ display:none; }
