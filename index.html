@@ -143,13 +143,16 @@
                       repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(93,78,68,0.015) 35px, rgba(93,78,68,0.015) 70px);
     pointer-events:none;
   }
-  .splash-top { position:relative; z-index:2; text-align:center; width:100%; padding-top:calc(40px + env(safe-area-inset-top, 0)); }
+  .splash-top { position:relative; z-index:2; text-align:center; width:100%; padding-top:calc(40px + env(safe-area-inset-top, 0)); filter:blur(8px); opacity:0; transform:scale(0.98); transition:filter 1.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), transform 1.2s cubic-bezier(0.25, 1, 0.5, 1); }
+  .splash-top.in { filter:blur(0); opacity:1; transform:scale(1); }
+  .splash-brand { text-shadow:0 0 12px rgba(210,170,170,0.35); animation:softFloat 5s ease-in-out infinite, softBreathe 4s ease-in-out infinite; }
   .splash-mid { position:relative; z-index:2; flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
-  .splash-illo { width:min(80%, 320px); max-width:80%; height:auto; object-fit:contain; filter:drop-shadow(0 6px 16px rgba(158,107,107,0.12)); }
   .splash-bottom { position:relative; z-index:2; padding-bottom:calc(20px + env(safe-area-inset-bottom, 0)); font-family:var(--font-en); font-size:12px; letter-spacing:1.5px; color:var(--text-sub); opacity:0.65; }
   .splash-title { font-family:var(--font-en); font-size:clamp(44px,10vw,64px); font-weight:600; color:var(--text); letter-spacing:1px; line-height:1; }
   .splash-sub { font-family:var(--font-zh); font-size:clamp(18px,4vw,24px); color:var(--text-sub); margin-top:16px; display:inline-block; animation:slowWiggle 4s ease-in-out infinite; }
   @keyframes slowWiggle { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
+  @keyframes softBreathe { 0%,100%{opacity:0.85} 50%{opacity:1} }
+  @keyframes softFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
   .splash-dots { display:flex; gap:8px; justify-content:center; margin-top:32px; }
   .splash-dot { width:8px; height:8px; border-radius:50%; animation:bounce 1.4s ease infinite; }
   .splash-dot:nth-child(1){background:var(--accent)} .splash-dot:nth-child(2){background:var(--accent2);animation-delay:0.15s}
@@ -1587,8 +1590,8 @@
     100% { transform:translateY(0) scale(1);      filter:blur(0px);     opacity:.88; }
   }
   @keyframes textRipple{
-    0%,100%{ text-shadow:0 0 8px rgba(222,184,196,.25), 0 0 20px rgba(222,184,196,.12); }
-    50%    { text-shadow:0 0 14px rgba(222,184,196,.40), 0 0 36px rgba(222,184,196,.22), 0 0 60px rgba(222,184,196,.08); }
+    0%,100%{ text-shadow:0 0 8px rgba(222,184,196,.25), 0 0 20px rgba(222,184,196,.12), 0 0 12px rgba(210,170,170,0.35); }
+    50%    { text-shadow:0 0 14px rgba(222,184,196,.40), 0 0 36px rgba(222,184,196,.22), 0 0 60px rgba(222,184,196,.08), 0 0 12px rgba(210,170,170,0.35); }
   }
   /* 底部圆点 —— 按 v5 去除跳动彩色圆点 */
   .splash-dots{ display:none; }
@@ -2029,34 +2032,12 @@ window.switchSpace=function(){
   <i class="splash-sparkle" style="bottom:16%;right:26%;animation-delay:1.8s"></i>
 
   <div class="splash-top">
-    <div class="splash-title">Our Home</div>
-    <div class="splash-sub">假装自己不是一个猎物</div>
+    <div class="splash-brand">
+      <div class="splash-title">Our Home</div>
+      <div class="splash-sub">假装自己不是一个猎物</div>
+    </div>
   </div>
   <div class="splash-mid">
-    <svg class="splash-illo" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <!-- 翅膀 -->
-      <path d="M64 118 C36 96 26 126 48 138 C34 146 42 166 60 152 C56 168 78 166 82 144 Z" fill="#ffffff" stroke="#e3d3cc" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M156 118 C184 96 194 126 172 138 C186 146 178 166 160 152 C164 168 142 166 138 144 Z" fill="#ffffff" stroke="#e3d3cc" stroke-width="2" stroke-linejoin="round"/>
-      <!-- 信封 -->
-      <rect x="56" y="104" width="108" height="74" rx="13" fill="#FBF3EC" stroke="#C9A9A0" stroke-width="2.5"/>
-      <path d="M56 109 L110 148 L164 109" fill="none" stroke="#C9A9A0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      <!-- 兔子耳朵 -->
-      <g stroke="#D9C2BC" stroke-width="2">
-        <ellipse cx="96" cy="58" rx="9" ry="27" fill="#F3E3DB" transform="rotate(-13 96 58)"/>
-        <ellipse cx="124" cy="58" rx="9" ry="27" fill="#F3E3DB" transform="rotate(13 124 58)"/>
-      </g>
-      <ellipse cx="96" cy="60" rx="4" ry="17" fill="#E7C6C6" transform="rotate(-13 96 60)"/>
-      <ellipse cx="124" cy="60" rx="4" ry="17" fill="#E7C6C6" transform="rotate(13 124 60)"/>
-      <!-- 兔头 -->
-      <circle cx="110" cy="94" r="25" fill="#F3E3DB" stroke="#D9C2BC" stroke-width="2"/>
-      <circle cx="102" cy="92" r="2.6" fill="#6C5B5B"/>
-      <circle cx="118" cy="92" r="2.6" fill="#6C5B5B"/>
-      <circle cx="97" cy="100" r="4.5" fill="#E7A6B8" opacity="0.5"/>
-      <circle cx="123" cy="100" r="4.5" fill="#E7A6B8" opacity="0.5"/>
-      <path d="M107 98 q3 3 6 0" fill="none" stroke="#C98B97" stroke-width="2" stroke-linecap="round"/>
-      <!-- 小爱心 -->
-      <path d="M110 34 c-4 -7 -15 -3 -11 6 c2 5 11 10 11 10 c0 0 9 -5 11 -10 c4 -9 -7 -13 -11 -6 Z" fill="#E7A6B8" opacity="0.85"/>
-    </svg>
     <div class="splash-dots">
       <div class="splash-dot"></div><div class="splash-dot"></div><div class="splash-dot"></div><div class="splash-dot"></div>
     </div>
@@ -2820,6 +2801,13 @@ window.switchSpace=function(){
   setTimeout(hideSplash, 3000);
   const __splashEl = document.getElementById('splash');
   if(__splashEl) __splashEl.addEventListener('click', hideSplash);
+  // 开屏文字入场：模糊到清晰 纸墨显影
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      const __st = document.querySelector('.splash-top');
+      if(__st) __st.classList.add('in');
+    }, 80);
+  });
 
   function mapMedia(x){
     var g = (x.gege && typeof x.gege==='object') ? x.gege : {status:null,rating:0};
