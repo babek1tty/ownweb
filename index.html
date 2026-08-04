@@ -222,7 +222,7 @@
 
   .main {
     flex:1; margin-top:calc(var(--top-h) + env(safe-area-inset-top, 0)); margin-bottom:var(--nav-h);
-    overflow-y:auto; overflow-x:hidden; padding:12px 20px 24px; position:relative;
+    overflow-y:auto; overflow-x:hidden; padding:12px 20px calc(88px + env(safe-area-inset-bottom, 0px)); position:relative;
   }
   .main::-webkit-scrollbar { width:0; }
   .page { display:none; animation:fadeIn 0.4s ease; }
@@ -1084,21 +1084,21 @@
 .achieve-section .achieve-card { margin-bottom:0; }
 .achieve-section .achieve-group-title + .achieve-card { margin-top:0; }
 
-  /* Bottom nav —— 底色延伸至屏幕物理最底端，杜绝 PWA 白条 */
+  /* Bottom nav —— 悬浮圆角卡片（法式手账贴纸风格） */
   .bottom-nav {
-    position:fixed; bottom:0; left:0; right:0; z-index:200;
+    position:fixed;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    left:16px; right:16px;
+    z-index:200;
     min-height:var(--nav-h); height:auto;
-    background:#FFF9F7;
-    backdrop-filter:blur(16px); border-top:1px solid var(--border);
+    background:rgba(255,252,248,0.92);
+    backdrop-filter:blur(20px) saturate(1.1);
+    border:1px solid rgba(210,190,180,0.35);
+    border-radius:24px;
+    box-shadow:0 6px 24px rgba(160,140,130,0.12), 0 2px 8px rgba(160,140,130,0.06);
     display:flex; justify-content:space-around; align-items:center;
-    padding:8px 10px;
-    padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
-    /* 安全网：::after 延伸底色到手势区最底，防止任何渲染间隙透白 */
-  }
-  .bottom-nav::after {
-    content:''; position:absolute; bottom:0; left:0; right:0;
-    height:env(safe-area-inset-bottom, 0px);
-    background:#FFF9F7; pointer-events:none;
+    padding:8px 6px;
+    overflow:hidden;
   }
   .bn-item {
     display:flex; flex-direction:column; align-items:center; gap:4px;
