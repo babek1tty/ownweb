@@ -214,9 +214,68 @@
   .cloud-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   .cloud-toast.err { background:rgba(158, 107, 107, 0.92); border-color:rgba(210, 190, 180, 0.45); }
 
+  /* v3.31：顶部破纪录通知横幅（形态 A，非阻塞式） */
+  .record-banner-container {
+    position:fixed; top:calc(16px + env(safe-area-inset-top, 0px)); left:50%;
+    transform:translateX(-50%);
+    z-index:9999; width:90%; max-width:360px;
+    pointer-events:none; /* 避免遮挡下方点击 */
+    transition:opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .record-banner-container.hidden { opacity:0; transform:translate(-50%, -20px); }
+  .record-banner-container.show { opacity:1; transform:translate(-50%, 0); }
+  .record-banner {
+    background:linear-gradient(135deg, #FFF7F8 0%, #FCEEEF 100%);
+    border:1px solid #F3D9DD; border-radius:20px;
+    padding:10px 16px; display:flex; align-items:center; gap:10px;
+    box-shadow:0 8px 24px -4px rgba(180, 120, 130, 0.15);
+    pointer-events:auto; /* 允许横幅本身被点击/触摸 */
+  }
+  .banner-badge {
+    font-family:"Georgia", serif; font-size:9px; font-weight:600;
+    letter-spacing:1.2px; color:#B26A74; background:#F5DFE2;
+    border:1px solid #E6C2C7; padding:3px 7px; border-radius:8px;
+    white-space:nowrap; text-transform:uppercase;
+  }
+  .banner-content { font-size:13px; color:#7A5C61; line-height:1.4; flex:1; }
+  .user-highlight, .game-highlight { color:#B26A74; font-weight:600; }
+  .score-highlight { font-family:"Georgia", serif; font-size:15px; font-weight:bold; color:#9E4D58; margin-left:2px; }
+
+  /* v3.31：吃豆人难度选择 Modal */
+  .mode-modal-mask {
+    position:fixed; inset:0; z-index:9998;
+    background:rgba(247,238,233,0.82);
+    display:flex; align-items:center; justify-content:center;
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    padding:20px;
+  }
+  .mode-modal-mask.hidden { display:none; }
+  .mode-select-card {
+    background:#FAF5F6; border:1px solid #EFE0E2; border-radius:24px;
+    padding:24px 20px; text-align:center; width:100%; max-width:340px;
+    box-shadow:0 12px 28px -6px rgba(130, 90, 98, 0.12);
+  }
+  .mode-header .subtitle { font-family:"Georgia", serif; font-size:11px; letter-spacing:2px; color:#C08A92; }
+  .mode-header .title { font-size:18px; font-weight:600; color:#6E4A52; margin-top:4px; margin-bottom:20px; }
+  .mode-options { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+  .mode-item {
+    background:#FFFFFF; border:1px solid #F0D5D8; border-radius:16px;
+    padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .mode-item.active { background:#FCE8EC; border-color:#E2B2B9; }
+  .mode-info { text-align:left; }
+  .mode-name { display:block; font-size:14px; font-weight:600; color:#6E4A52; }
+  .mode-desc { font-size:11px; color:#A0858A; }
+  .mode-tag { font-family:"Georgia", serif; font-size:10px; letter-spacing:1px; color:#B26A74; }
+  .btn-start {
+    width:100%; background:#E8CFD3; color:#6E4A52; border:none; border-radius:18px;
+    padding:12px 0; font-size:15px; font-weight:600; cursor:pointer;
+  }
+
   .main {
     flex:1; margin-top:calc(var(--top-h) + env(safe-area-inset-top, 0)); margin-bottom:var(--nav-h);
-    overflow-y:auto; overflow-x:hidden; padding:12px 20px calc(88px + env(safe-area-inset-bottom, 0px)); position:relative;
+    overflow-y:auto; overflow-x:hidden; padding:12px 20px calc(100px + env(safe-area-inset-bottom, 0px)); position:relative;
   }
   .main::-webkit-scrollbar { width:0; }
   .page { display:none; animation:fadeIn 0.4s ease; }
@@ -506,7 +565,7 @@
   /* 影视 / 图书 四分类主页 */
   .film-main-search{ margin:8px 0 16px; }
   .film-main-search .film-search-input{ background:#fff; }
-  .film-tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+  .film-tabs{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; padding-bottom:20px; }
   .film-tab{ background:#fffaf5; border-radius:18px; padding:14px 6px; text-align:center; box-shadow:var(--shadow); cursor:pointer; transition:transform .1s; }
   .film-tab:active{ transform:scale(0.98); }
   .film-tab-label{ display:block; font-size:14px; color:var(--text); margin-bottom:6px; }
@@ -695,16 +754,6 @@
     mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/%3E%3C/svg%3E") center/contain no-repeat;
   }
   .ctrl-refresh-btn:hover { background:rgba(255,255,255,1); transform:rotate(90deg); }
-  /* 纯 CSS 重绘的方向键箭头（替代被移除的方向字符） */
-  #pacmanDpad button{ position:relative; }
-  #pacmanDpad button::before{
-    content:''; position:absolute; top:50%; left:50%;
-    width:0; height:0; margin:-7px 0 0 -8px;
-    border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:11px solid #5d4e44;
-  }
-  #pacmanDpad .dpad-down::before{ transform:rotate(180deg); }
-  #pacmanDpad .dpad-left::before{ transform:rotate(-90deg); }
-  #pacmanDpad .dpad-right::before{ transform:rotate(90deg); }
   .ctrl-offline { text-align:center; padding:30px 0; font-family:var(--font-zh); font-size:14px; color:var(--text-light); }
 
   /* 数据概览看板（双人独立统计） */
@@ -879,19 +928,42 @@
   .game-card.g1 { background:rgba(198, 214, 200, 0.6); }
   .game-card.g2 { background:rgba(224, 200, 210, 0.6); }
   .game-card.g3 { background:rgba(200, 212, 224, 0.6); }
+  .game-card.g4 { background:rgba(214, 200, 224, 0.6); }
+  .game-card.g5 { background:rgba(200, 224, 214, 0.6); grid-column: span 2; aspect-ratio:auto; min-height:84px; }
   .game-name { font-size:18px; font-weight:600; letter-spacing:0.5px; }
   .game-sub { font-family:var(--font-en); font-style:italic; font-size:11px; letter-spacing:1.5px; color:var(--text-sub); }
   .game-board {
     background:rgba(255,255,255,0.7); border-radius:20px; padding:16px;
     box-shadow:var(--shadow); margin-bottom:16px; display:none;
+    max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
   }
   .game-board.show { display:block; }
+  .game-board::-webkit-scrollbar { width:0; }
   .game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .game-score { font-family:var(--font-en); font-size:20px; font-weight:600; color:var(--text); }
   .game-back-btn { padding:6px 14px; border-radius:20px; border:1px solid rgba(210, 190, 180, 0.4); background:rgba(255, 252, 248, 0.75); font-family:var(--font-zh); font-size:13px; letter-spacing:0.5px; color:#6C5B5B; cursor:pointer; box-shadow:0 2px 6px rgba(0, 0, 0, 0.03); transition:background 0.22s ease, transform 0.12s ease, opacity 0.12s ease; -webkit-tap-highlight-color:transparent; }
   .game-back-btn:hover { background:rgba(255, 252, 248, 0.92); }
   .game-back-btn:active { transform:scale(0.95); opacity:0.8; }
-  #gameCanvas { display:block; margin:0 auto; border-radius:12px; background:#fff; touch-action:none; }
+  #gameCanvas, #gameContainer canvas { display:block; margin:0 auto; border-radius:12px; background:#fff; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  #gameContainer { touch-action:none; }
+  .ms-wrap, .ms-wrap > div { touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+
+  /* 消消乐 Match-3 */
+  .m3-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; }
+  .m3-bar { display:flex; gap:10px; align-items:center; width:100%; justify-content:center; }
+  .m3-timer, .m3-score { font-family:var(--font-en); font-size:14px; font-weight:600; color:var(--text); background:rgba(255,252,248,0.85); padding:4px 12px; border-radius:14px; box-shadow:var(--shadow); }
+  .m3-grid { display:grid; gap:4px; width:100%; max-width:328px; margin:0 auto; touch-action:none; user-select:none; -webkit-user-select:none; }
+  .m3-cell { aspect-ratio:1; border-radius:9px; cursor:pointer; touch-action:none; box-shadow:inset 0 -3px 0 rgba(0,0,0,0.07); transition:transform 0.08s ease; }
+  .m3-cell.sel { outline:3px solid #6C5B5B; outline-offset:1px; transform:scale(0.9); }
+  .m3-end-btn { font-family:var(--font-zh); font-size:13px; font-weight:600; color:#6C5B5B; background:rgba(224,200,210,0.7); border:1px solid rgba(210,190,180,0.5); border-radius:14px; padding:4px 14px; cursor:pointer; }
+  .m3-end-btn:active { transform:scale(0.95); }
+
+  /* 见缝插针 AA Arrow */
+  .aa-tip { font-family:var(--font-zh); font-size:12px; color:var(--text-sub); text-align:center; margin-top:8px; }
+
+  /* 游戏进行中：彻底锁定整页滚动，避免滑动手势触发浏览器默认滚动/下拉刷新 */
+  body.game-active { overflow:hidden; position:fixed; width:100%; height:100%; -webkit-overflow-scrolling:auto; }
+  body.game-active .main { overflow:hidden; }
   .game-over-overlay {
     position:absolute; top:0; left:0; right:0; bottom:0;
     background:rgba(255,255,255,0.85); border-radius:20px;
@@ -910,6 +982,10 @@
   .lb-game-tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
   .lb-game-tab { padding:6px 16px; border-radius:12px; border:none; background:transparent; font-family:var(--font-zh); font-size:12px; color:#9a8c84; cursor:pointer; transition:all 0.2s; }
   .lb-game-tab.active { background:#EADBD9; color:#6C5B5B; font-weight:600; }
+  .lb-mode-tabs { display:flex; gap:6px; margin-bottom:12px; }
+  .lb-mode-tab { flex:1; padding:6px 4px; border-radius:10px; border:none; background:transparent; font-family:var(--font-zh); font-size:11px; color:#b09a90; cursor:pointer; transition:all 0.2s; }
+  .lb-mode-tab.active { background:#F3DDE0; color:#B26A74; font-weight:600; }
+  .lb-mode-tag { font-size:10px; color:#B26A74; margin-left:6px; font-weight:600; }
   .lb-list { display:flex; flex-direction:column; gap:8px; }
   .lb-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,0.5); }
   .lb-rank { font-family:var(--font-en); font-size:18px; font-weight:600; min-width:28px; text-align:center; }
@@ -1722,7 +1798,7 @@
 
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.warn('Supabase CDN 加载失败，云端功能将不可用');window.__supabaseCdnOk=false;"></script>
 <script>
 /* ========== 图标作用域分离：页面导航 vs 成就勋章（完全解耦）========== */
 /* ① 页面导航图标：仅用于底部 Tab + 首页模块卡片；严禁引用成就勋章库 */
@@ -1820,6 +1896,11 @@ const Cloud=(function(){
   let sb=null,userId=null,spaceId=null,role=null,ready=false,presCh=null;
   async function init(){
     try{
+      // v3.31：CDN 可能因网络/防火墙未加载，先检测再创建 client
+      if(!window.supabase || typeof window.supabase.createClient!=='function'){
+        console.error('Cloud init 失败：Supabase SDK 未加载（CDN 不可达）');
+        ready=false; return false;
+      }
       sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
       spaceId=localStorage.getItem('oh_space_id');
       role=localStorage.getItem('oh_role');
@@ -1861,22 +1942,34 @@ const Cloud=(function(){
   async function ensureMember(r){ if(!spaceId)return; let {error}=await sb.from('space_members').insert({space_id:spaceId,user_id:userId,role:r}); if(error){ if(error.code==='23505'){ const {error:e2}=await sb.from('space_members').update({role:r}).eq('space_id',spaceId).eq('user_id',userId); if(e2)console.error('Cloud ensureMember 更新角色失败:',e2.message); } else { console.error('Cloud ensureMember 失败:',error.message); } } }
   // v3.30.3：读取当前空间邀请码，用于在界面常驻展示，避免“空间串台”
   async function getSpaceCode(){ if(!spaceId) return null; const {data,error}=await sb.from('spaces').select('code').eq('id',spaceId).single(); if(error){ return null; } return data? data.code : null; }
+  // v3.31：loadAll 改用 Promise.allSettled，单表失败不拖垮其余表；每路请求加 15s 超时兜底
   async function loadAll(){
     if(!spaceId)return{};
-    const [m,c,msg,ach,ann,wsh,mst,grd,gm,med,cr]=await Promise.all([
-      sb.from('moods').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('capsules').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('messages').select().eq('space_id',spaceId).order('created_at',{ascending:false}).range(0,999999),
-      sb.from('achievements').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('anniversaries').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('wishes').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('mistakes').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('grudges').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('game_scores').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('media').select().eq('space_id',spaceId).range(0,999999),
-      sb.from('ctrl_records').select().eq('space_id',spaceId).range(0,999999)
-    ]);
-    return{moods:m.data||[],caps:c.data||[],msgs:msg.data||[],ach:ach.data||[],anns:ann.data||[],wishes:wsh.data||[],mistakes:mst.data||[],grudges:grd.data||[],games:gm.data||[],media:med.data||[],ctrls:cr.data||[]};
+    var _TO = 15000;
+    function withTimeout(p){ return Promise.race([p, new Promise(function(_,r){ setTimeout(function(){ r(new Error('请求超时')); }, _TO); })]); }
+    var keys=['moods','caps','msgs','ach','anns','wsh','mst','grd','gm','med','cr'];
+    var queries=[
+      withTimeout(sb.from('moods').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('capsules').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('messages').select().eq('space_id',spaceId).order('created_at',{ascending:false}).range(0,999999)),
+      withTimeout(sb.from('achievements').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('anniversaries').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('wishes').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('mistakes').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('grudges').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('game_scores').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('media').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('ctrl_records').select().eq('space_id',spaceId).range(0,999999))
+    ];
+    var results = await Promise.allSettled(queries);
+    var out={}, failed=0;
+    results.forEach(function(r,i){
+      var k=keys[i];
+      if(r.status==='fulfilled' && r.value && !r.value.error){ out[k]=r.value.data||[]; }
+      else { out[k]=[]; failed++; console.warn('Cloud loadAll 表 '+k+' 加载失败:', r.status==='rejected'?r.reason:(r.value&&r.value.error)||'unknown'); }
+    });
+    if(failed>0) console.warn('Cloud loadAll 共 '+failed+'/'+keys.length+' 张表加载异常（已降级为空，不影响其他表）');
+    return{moods:out.moods||[],caps:out.caps||[],msgs:out.msgs||[],ach:out.ach||[],anns:out.anns||[],wishes:out.wishes||[],mistakes:out.mst||[],grudges:out.grd||[],games:out.gm||[],media:out.med||[],ctrls:out.cr||[]};
   }
   // v3.30.4：还原 saveMood（此前被误删），心情按 (space_id,date,role) 唯一，每人每天一条
   async function saveMood(date,r,mk){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('moods',{space_id:spaceId,date:date,role:r,mood_key:mk},[['space_id',spaceId],['date',date],['role',r]]); if(error){console.error('Cloud saveMood 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
@@ -1886,7 +1979,7 @@ const Cloud=(function(){
   async function wishSave(w){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('wishes',{space_id:spaceId,id:String(w.id),role:w.role,text:w.text,time:w.time,fulfilled:!!w.fulfilled,fulfilled_by:w.fulfilledBy||null,fulfilled_time:w.fulfilledTime||null},[['space_id',spaceId],['id',String(w.id)]]); if(error){console.error('Cloud wishSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function mistakeSave(m){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('mistakes',{space_id:spaceId,id:String(m.id),text:m.text,time:m.time,replies:m.replies||[],tags:m.tags||[]},[['space_id',spaceId],['id',String(m.id)]]); if(error){console.error('Cloud mistakeSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function grudgeSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('grudges',{space_id:spaceId,id:String(g.id),text:g.text,time:g.time,replies:g.replies||[],tags:g.tags||[]},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud grudgeSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
-  async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time,mode:g.mode||'normal'},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniAdd(a){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('anniversaries',{space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},[['space_id',spaceId],['id',String(a.id)]]); if(error){console.error('Cloud anniAdd 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
   async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:(kind==='book')?(item.publisher||null):(item.duration||null),country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
@@ -1931,13 +2024,15 @@ const Cloud=(function(){
   let recCh=null;
   async function loadTable(name){
     if(!ready||!spaceId) return null;
-    let q = sb.from(name).select().eq('space_id', spaceId);
-    if(name==='messages') q = q.order('created_at', {ascending:false});
-    // v3.30.7：突破 PostgREST 默认 1000 行上限，避免实时回写时整体覆盖本地数组导致旧记录"消失"
-    q = q.range(0, 999999);
-    const { data, error } = await q;
-    if(error){ console.error('Cloud loadTable 失败', name, error.message); return null; }
-    return data||[];
+    try{
+      let q = sb.from(name).select().eq('space_id', spaceId);
+      if(name==='messages') q = q.order('created_at', {ascending:false});
+      // v3.30.7：突破 PostgREST 默认 1000 行上限，避免实时回写时整体覆盖本地数组导致旧记录"消失"
+      q = q.range(0, 999999);
+      const { data, error } = await q;
+      if(error){ console.error('Cloud loadTable 失败', name, error.message); return null; }
+      return data||[];
+    }catch(e){ console.error('Cloud loadTable('+name+') 网络异常:', e); return null; }
   }
   function subscribeRecords(cb){
     if(!ready||!spaceId) return;
@@ -1947,12 +2042,41 @@ const Cloud=(function(){
     tbls.forEach(function(t){ recCh=recCh.on('postgres_changes',{event:'*',schema:'public',table:t,filter:'space_id=eq.'+spaceId},function(p){ try{ cb(t,p); }catch(e){ console.error('records 实时回调异常', e); } }); });
     recCh.subscribe();
   }
+  // v3.31：破纪录广播通道（Supabase Realtime Broadcast）——双方同时在线时即时推送"破纪录"事件
+  let bannerCh = null;
+  function subscribeRecordBanner(cb){
+    if(!ready||!spaceId||!sb) return;
+    try{
+      bannerCh = sb.channel('game_records_banner_'+spaceId);
+      bannerCh.on('broadcast', {event:'new_record'}, function(p){
+        try{ if(cb && p && p.payload) cb(p.payload); }catch(e){ console.error('record banner 回调异常', e); }
+      }).subscribe();
+    }catch(e){ console.warn('subscribeRecordBanner 失败:', e); }
+  }
+  function sendRecordBroadcast(payload){
+    if(!ready||!sb) return;
+    try{
+      if(!bannerCh){ bannerCh = sb.channel('game_records_banner_'+spaceId); bannerCh.subscribe(); }
+      bannerCh.send({ type:'broadcast', event:'new_record', payload:payload });
+    }catch(e){ console.warn('sendRecordBroadcast 失败:', e); }
+  }
   if(document.readyState!=='loading'){ init(); } else { document.addEventListener('DOMContentLoaded', init); }
   window.addEventListener('beforeunload',function(){ if(ready) setPresence(false); });
-  return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,messageDelete:messageDelete,wishSave:wishSave,mistakeSave:mistakeSave,mistakeDelete:mistakeDelete,grudgeSave:grudgeSave,grudgeDelete:grudgeDelete,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,getSpaceCode:getSpaceCode,
+  return{init:init,setIdentity:setIdentity,createSpace:createSpace,joinSpace:joinSpace,ensureMember:ensureMember,loadAll:loadAll,saveMood:saveMood,addCapsule:addCapsule,openCapsule:openCapsule,addMessage:addMessage,messageDelete:messageDelete,wishSave:wishSave,mistakeSave:mistakeSave,mistakeDelete:mistakeDelete,grudgeSave:grudgeSave,grudgeDelete:grudgeDelete,gameSave:gameSave,anniAdd:anniAdd,anniDelete:anniDelete,mediaSave:mediaSave,mediaDelete:mediaDelete,ctrlSave:ctrlSave,ctrlDelete:ctrlDelete,loadTable:loadTable,subscribeRecords:subscribeRecords,subscribeRecordBanner:subscribeRecordBanner,sendRecordBroadcast:sendRecordBroadcast,syncFirstSeen:syncFirstSeen,syncAchievementUnlocked:syncAchievementUnlocked,setPresence:setPresence,subscribePresence:subscribePresence,getSpaceCode:getSpaceCode,
     get spaceId(){return spaceId;},get role(){return role;},get ready(){return ready;},onSaveResult:onSaveResult};
 })();
 window.Cloud=Cloud;
+// v3.31：全局未捕获 Promise rejection 兜底——捕获所有 "TypeError: Load failed" 等网络异常，避免静默崩溃
+window.addEventListener('unhandledrejection', function(ev){
+  var msg = ev.reason && (ev.reason.message || ev.reason.toString()) || String(ev.reason);
+  // 只拦截 Supabase/fetch 相关的网络异常，不吞掉真正的代码 bug
+  if(/load failed|failed to fetch|network|timeout|abort/i.test(msg)){
+    ev.preventDefault(); // 阻止默认的红色控制台输出
+    console.warn('Cloud 全局兜底（已拦截）:', msg);
+    // 尝试通过已有通道提示用户
+    try{ if(typeof showCloudError==='function') showCloudError('网络波动，部分数据暂未同步'); }catch(_e){}
+  }
+});
 </script>
 <style>
 .space-modal{position:fixed;inset:0;background:rgba(247,238,233,0.98);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:var(--font-zh,sans-serif);}
@@ -1980,7 +2104,14 @@ window.Cloud=Cloud;
   .film-tab:nth-child(3) .film-tab-count{ background:#D8B8B0; }
   .film-tab:nth-child(4) .film-tab-count{ background:#BEB2C8; }
   /* 列表防遮挡 */
-  .film-list{ display:flex; flex-direction:column; gap:8px; padding-bottom:80px; }
+  .film-list{ display:flex; flex-direction:column; gap:8px; padding-bottom:100px; }
+  /* 书房子页（藏书主页/影视各tab）底部留白，防止内容/装饰被 Tab 栏遮挡 */
+  #study-book, #study-movie, #study-book-want, #study-book-watching,
+  #study-book-watched, #study-book-both, #study-movie-want,
+  #study-movie-watching, #study-movie-watched, #study-movie-both {
+    padding-bottom: 24px;
+    min-height: calc(100vh - var(--top-h) - var(--nav-h) - 120px);
+  }
   /* 主新增按钮（合并后浮窗） */
   .film-float-add-main{ position:fixed; right:18px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0) + 16px); border:none; background:linear-gradient(135deg,#F3C6C6 0%,#EBA8A8 100%); color:#fff; font-family:var(--font-zh); font-size:15px; font-weight:600; padding:13px 22px; border-radius:26px; box-shadow:0 8px 22px rgba(214,140,140,0.35); cursor:pointer; z-index:210; letter-spacing:1px; transition:transform .12s; }
   .film-float-add-main:active{ transform:scale(0.95); }
@@ -2036,6 +2167,18 @@ window.switchSpace=function(){
 
 </head>
 <body>
+
+<!-- 顶部破纪录通知横幅（形态 A：默认隐藏，收到通知时滑出） -->
+<div id="recordBanner" class="record-banner-container hidden">
+  <div class="record-banner">
+    <div class="banner-badge">NEW RECORD</div>
+    <div class="banner-content">
+      <span id="bannerUser" class="user-highlight">宝宝</span> 刷新了
+      <span id="bannerGame" class="game-highlight">吃豆人</span> 最高纪录！
+      <span id="bannerScore" class="score-highlight">1,250</span> 分
+    </div>
+  </div>
+</div>
 
 <div class="splash" id="splash">
   <!-- 手绘纸纹三层叠加：网格 + 纤维噪点 + 水彩色斑 -->
@@ -2118,6 +2261,52 @@ window.switchSpace=function(){
     </div>
   </header>
   <div class="cloud-toast" id="cloudToast"></div>
+
+  <!-- 吃豆人难度选择 Modal -->
+  <div id="pacmanModeModal" class="mode-modal-mask hidden">
+    <div class="mode-select-card">
+      <div class="mode-header">
+        <div class="subtitle">PAC-MAN</div>
+        <div class="title">选择游戏难度</div>
+      </div>
+      <div class="mode-options">
+        <div class="mode-item" data-mode="easy" onclick="selectPacmanMode('easy')">
+          <div class="mode-info">
+            <span class="mode-name">简单</span>
+            <span class="mode-desc">怪物移动缓慢，能量豆时效长</span>
+          </div>
+          <span class="mode-tag">EASY</span>
+        </div>
+        <div class="mode-item active" data-mode="normal" onclick="selectPacmanMode('normal')">
+          <div class="mode-info">
+            <span class="mode-name">中等</span>
+            <span class="mode-desc">标准移动速度，经典吃豆体验</span>
+          </div>
+          <span class="mode-tag">NORMAL</span>
+        </div>
+        <div class="mode-item" data-mode="hard" onclick="selectPacmanMode('hard')">
+          <div class="mode-info">
+            <span class="mode-name">困难</span>
+            <span class="mode-desc">怪物带追踪 AI，速度大幅提升</span>
+          </div>
+          <span class="mode-tag">HARD</span>
+        </div>
+      </div>
+      <button class="btn-start" onclick="startPacmanGame()">开始游戏</button>
+    </div>
+  </div>
+
+  <!-- 通用游戏模式选择 Modal（消消乐 / 数独 共用） -->
+  <div id="gameModeModal" class="mode-modal-mask hidden">
+    <div class="mode-select-card">
+      <div class="mode-header">
+        <div class="subtitle" id="gameModeSub">GAME</div>
+        <div class="title" id="gameModeTitle">选择模式</div>
+      </div>
+      <div class="mode-options" id="gameModeOptions"></div>
+      <button class="btn-start" id="gameModeStartBtn">开始游戏</button>
+    </div>
+  </div>
 
   <main class="main" id="mainContent">
 
@@ -2369,13 +2558,21 @@ window.switchSpace=function(){
               <span class="game-name">2048</span>
               <span class="game-sub">Classic</span>
             </button>
-            <button class="game-card g2" onclick="startGame('pacman')">
+            <button class="game-card g2" onclick="showPacmanModeSelect()">
               <span class="game-name">吃豆人</span>
               <span class="game-sub">Retro</span>
             </button>
             <button class="game-card g3" onclick="startGame('minesweeper')">
               <span class="game-name">扫雷</span>
               <span class="game-sub">Puzzle</span>
+            </button>
+            <button class="game-card g4" onclick="showGameModeSelect('match3')">
+              <span class="game-name">消消乐</span>
+              <span class="game-sub">Match 3</span>
+            </button>
+            <button class="game-card g5" onclick="showGameModeSelect('aa_arrow')">
+              <span class="game-name">见缝插针</span>
+              <span class="game-sub">NEEDLE • TIMING</span>
             </button>
           </div>
           <div class="notebook-add">
@@ -2384,7 +2581,10 @@ window.switchSpace=function(){
               <button class="lb-game-tab active" data-game="2048" onclick="switchLbGame('2048')">2048</button>
               <button class="lb-game-tab" data-game="pacman" onclick="switchLbGame('pacman')">吃豆人</button>
               <button class="lb-game-tab" data-game="minesweeper" onclick="switchLbGame('minesweeper')">扫雷</button>
+              <button class="lb-game-tab" data-game="match3" onclick="switchLbGame('match3')">消消乐</button>
+              <button class="lb-game-tab" data-game="aa_arrow" onclick="switchLbGame('aa_arrow')">见缝插针</button>
             </div>
+            <div class="lb-mode-tabs" id="lbModeTabs" style="display:none;"></div>
             <div class="lb-tabs" id="lbTabs">
               <button class="lb-tab active" data-period="day" onclick="switchLbPeriod('day')">日榜</button>
               <button class="lb-tab" data-period="week" onclick="switchLbPeriod('week')">周榜</button>
@@ -2733,6 +2933,8 @@ window.switchSpace=function(){
   let capsules = [];
   let wishes = [];
   let gameScores = [];
+  // v3.31：排行榜本地缓存——云端失败时从 localStorage 恢复，避免"TypeError: Load failed"后排行榜永久空白
+  try{ var _gsCache = JSON.parse(localStorage.getItem('oh_cache_game_scores')||'[]'); if(Array.isArray(_gsCache) && _gsCache.length) gameScores = _gsCache; }catch(_e){}
   let onlineRole = null;
   let seenAchievements = new Set();
   // v3.30.5：成就解锁时间与"已看过"集合本地持久化——即便云端同步失败（iOS Safari 等），原始解锁时间与"已弹过"状态也不会丢
@@ -2775,7 +2977,8 @@ window.switchSpace=function(){
   let filmStatus = 'want';
   const filmSearch = {};
   let capsuleRole = null, wishRole = null, gameRole = null;
-  let currentGame = null, currentLbGame = "2048", currentLbPeriod = "day";
+  let currentGame = null, currentLbGame = "2048", currentLbPeriod = "day", currentLbMode = "all";
+  let pacmanSelectedMode = 'normal'; // v3.31：吃豆人难度选择
   let gameInstance = null;
   let anniversaries = [];
   let moodData = {};
@@ -2892,7 +3095,47 @@ window.switchSpace=function(){
         grudges = Object.keys(gMerged).map(function(k){ return gMerged[k]; });
         if(typeof renderGrudges==='function') renderGrudges();
       }
-      else if(table==='game_scores'){ gameScores = rows.map(function(g){ return {game:g.game, role:g.role, score:g.score, time:g.time}; }); if(typeof renderLeaderboard==='function') renderLeaderboard(); }
+      else if(table==='game_scores'){
+        // v3.31：破纪录兜底检测——先取该游戏合并前的最高分（用于判断对方新分是否破纪录）
+        var gsPrevBest = 0;
+        if(arguments.length>1){
+          var _bp = arguments[1];
+          if(_bp && _bp.eventType==='INSERT' && _bp.new && _bp.new.game){
+            gameScores.forEach(function(s){ if(s.game===_bp.new.game && s.score>gsPrevBest) gsPrevBest = s.score; });
+          }
+        }
+        // v3.31：按 id 合并，保留本地刚打完、尚未同步到云端的分数（避免被云端回显覆盖消失）
+        var gsCloudById = {};
+        rows.forEach(function(g){ if(g && g.id) gsCloudById[g.id] = g; });
+        var gsLocalById = {};
+        gameScores.forEach(function(g){ if(g && g.id) gsLocalById[g.id] = g; });
+        var gsMerged = {};
+        rows.forEach(function(g){
+          if(!g || !g.id) return;
+          var local = gsLocalById[g.id];
+          // 本地同 id 分数更高则保留本地（乐观写入优先）
+          gsMerged[g.id] = {id:g.id, game:g.game, role:g.role, score:(local && local.score > g.score)?local.score:g.score, time:g.time, mode:g.mode||'normal'};
+        });
+        // 保留云端还没有的本地条目
+        gameScores.forEach(function(g){ if(g && g.id && !gsCloudById[g.id]) gsMerged[g.id] = g; });
+        gameScores = Object.keys(gsMerged).map(function(k){ return gsMerged[k]; });
+        // 同步更新 localStorage 缓存
+        try{ localStorage.setItem('oh_cache_game_scores', JSON.stringify(gameScores)); }catch(_e){}
+        if(typeof renderLeaderboard==='function') renderLeaderboard();
+      }
+      // v3.31：实时检测游戏分数 INSERT 事件
+      if(table==='game_scores' && arguments.length>1){
+        var _payload = arguments[1];
+        if(_payload && _payload.eventType==='INSERT' && _payload.new){
+          var _gn = _payload.new.game||'', _gr = _payload.new.role||'', _gs = _payload.new.score||0;
+          var _name = _gr==='gege'?'哥哥':'宝宝';
+          var _gname = _gn==='2048'?'2048':_gn==='pacman'?'吃豆人':_gn==='minesweeper'?'扫雷':_gn;
+          // 任意新分感知（轻量 Toast）
+          if(typeof showCloudToast==='function') showCloudToast(_name+' 刚在 '+_gname+' 拿下 '+_gs+' 分！');
+          // 破纪录兜底通道：对方离线时你也能收到（与 Broadcast 通道共用去重 key，避免重复弹）
+          if(Number(_gs) > gsPrevBest) notifyRecordBreakFromRemote(_name, _gname, _gs);
+        }
+      }
       else if(table==='media'){
         // v3.30.8：按 id 合并，保留尚未同步到云端的本地乐观条目（避免刚添加的电影/书被回显覆盖消失）
         var mCloudIds = {};
@@ -2936,7 +3179,7 @@ window.switchSpace=function(){
         persistAch();
         if(typeof checkAchieveRedDot==='function') checkAchieveRedDot();
       }
-    });
+    }).catch(function(e){ console.error('Cloud onRecordChange('+table+') 异常:', e); });
   }
 
   // v3.30.3：常驻空间邀请码 chip + 云端同步提示
@@ -2958,6 +3201,43 @@ window.switchSpace=function(){
     if(window.Cloud && Cloud.onSaveResult){
       Cloud.onSaveResult(function(r){ if(r&&r.ok) showCloudToast('已同步到云端 '); else if(r) showCloudError(r.error||'同步失败'); });
     }
+  }
+  // v3.31：顶部破纪录横幅（形态 A）——填充数据、滑出、4 秒后自动隐藏
+  function showRecordBanner(username, gameName, score){
+    const banner=document.getElementById('recordBanner');
+    if(!banner) return;
+    const userEl=document.getElementById('bannerUser');
+    const gameEl=document.getElementById('bannerGame');
+    const scoreEl=document.getElementById('bannerScore');
+    if(userEl) userEl.textContent=username||'';
+    if(gameEl) gameEl.textContent=gameName||'';
+    if(scoreEl) scoreEl.textContent=(Number(score)||0).toLocaleString();
+    banner.classList.remove('hidden');
+    banner.classList.add('show');
+    clearTimeout(window.__recordBannerT);
+    window.__recordBannerT=setTimeout(function(){
+      banner.classList.remove('show');
+      banner.classList.add('hidden');
+    }, 4000);
+  }
+  // v3.31：玩家破纪录时——本机立即展示 + 广播给同时在线对方
+  function sendRecordNotification(role, game, score){
+    const roleName = role==='gege'?'哥哥':'宝宝';
+    const gameName = game==='2048'?'2048':game==='pacman'?'吃豆人':game==='minesweeper'?'扫雷':game;
+    showRecordBanner(roleName, gameName, score); // 本机立即显示（破纪录者本人也看到仪式感）
+    if(window.Cloud && Cloud.ready && Cloud.sendRecordBroadcast){
+      Cloud.sendRecordBroadcast({username:roleName, gameName:gameName, score:score});
+    }
+  }
+  // v3.31：破纪录通知去重——Broadcast(双方在线) 与 postgres_changes(对方离线兜底) 可能在同一时刻触发同一事件，用统一 key 防止重复弹
+  var __recordNotifiedKeys = {};
+  function notifyRecordBreakFromRemote(username, gameName, score){
+    var key = gameName + '|' + username + '|' + score;
+    var now = Date.now();
+    for(var _k in __recordNotifiedKeys){ if(now - __recordNotifiedKeys[_k] > 6000) delete __recordNotifiedKeys[_k]; }
+    if(__recordNotifiedKeys[key]) return; // 6 秒内同一事件已通知，跳过
+    __recordNotifiedKeys[key] = now;
+    showRecordBanner(username, gameName, score);
   }
   function setupSpaceChip(){
     const chip=document.getElementById('spaceChip');
@@ -3046,7 +3326,7 @@ window.switchSpace=function(){
             var localGrudges = grudges.filter(function(g){ return g && g.id && !cloudGrudgeIds[g.id]; });
             grudges = d.grudges.map(function(g){ return {id:g.id, text:g.text, time:g.time, replies:g.replies||[], tags:g.tags||[]}; }).concat(localGrudges);
           }
-          if(d.games && d.games.length) gameScores = d.games.map(function(g){ return {game:g.game, role:g.role, score:g.score, time:g.time}; });
+          if(d.games && d.games.length) gameScores = d.games.map(function(g){ return {game:g.game, role:g.role, score:g.score, time:g.time, mode:g.mode||'normal'}; });
           if(d.media && d.media.length){
             // v3.30.8：与本地乐观新增的电影/书按 id 合并，避免 loadAll 延迟返回时整体覆盖刚新增、尚未同步到云端的条目
             var cloudMediaIds = {};
@@ -3072,9 +3352,20 @@ window.switchSpace=function(){
           ctrlRenderRecords();
           renderCalendar(); renderCapsules(); renderMessages(); if(typeof renderAnniversaries==='function') renderAnniversaries(); if(typeof refreshFilmViews==='function') refreshFilmViews(filmType); checkAchieveRedDot();
         }catch(e){ console.error('Cloud load err', e); }
-      }).catch(function(){ achieveInitialized = true; });
+      }).catch(function(e){
+        console.error('Cloud loadAll 整体异常:', e);
+        // v3.31：从 localStorage 恢复排行榜缓存，避免云端失败时排行榜永久空白
+        try{ var _cached = localStorage.getItem('oh_cache_game_scores'); if(_cached){ var _arr = JSON.parse(_cached); if(Array.isArray(_arr) && _arr.length){ gameScores = _arr; if(typeof renderLeaderboard==='function') renderLeaderboard(); console.log('已从本地缓存恢复排行榜('+_arr.length+'条)'); } } }catch(_e){}
+        achieveInitialized = true;
+        // v3.31：通过已有通道向用户展示错误提示（而非静默吞掉）
+        if(typeof showCloudError==='function') showCloudError('网络波动，部分数据暂未同步');
+      });
       Cloud.subscribePresence(function(payload){ var el=document.getElementById('partnerPresence'); if(el){} });
       Cloud.subscribeRecords(onRecordChange);
+      // v3.31：订阅破纪录广播——收到对方实时推送时顶部滑出 Banner
+      Cloud.subscribeRecordBanner(function(p){
+        if(p && p.username){ notifyRecordBreakFromRemote(p.username, p.gameName, p.score); }
+      });
       // v3.30.2：兜底——云端异常/超时也允许弹窗，避免永不弹
       setTimeout(function(){ achieveInitialized = true; }, 5000);
     } else {
@@ -4196,52 +4487,174 @@ function paintStars(r){
   // gameRole is set by online selection
 
 
-  window.startGame = function(game) {
+  window.startGame = function(game, mode) {
     if(!onlineRole){ return; }
     currentGame = game;
     document.getElementById('gameHome').style.display = 'none';
     const board = document.getElementById('gameBoard');
     board.classList.add('show');
+    document.body.classList.add('game-active');
     document.getElementById('gameOverOverlay').classList.remove('show');
     document.getElementById('gameScoreDisplay').textContent = '分数: 0';
+    document.getElementById('gameOverText').textContent = '游戏结束';
     const container = document.getElementById('gameContainer');
     container.innerHTML = '';
     if(gameInstance) { gameInstance.destroy && gameInstance.destroy(); gameInstance = null; }
     if(game === '2048') gameInstance = init2048(container);
-    else if(game === 'pacman') gameInstance = initPacman(container);
+    else if(game === 'pacman') gameInstance = initPacman(container, mode);
     else if(game === 'minesweeper') gameInstance = initMinesweeper(container);
+    else if(game === 'match3') gameInstance = initMatch3(container, mode || 'time_60s');
+    else if(game === 'aa_arrow') gameInstance = initAAArrow(container, mode || 'normal');
   };
+
+  // v3.31：吃豆人难度选择 Modal 交互
+  window.showPacmanModeSelect = function() {
+    if(!onlineRole){ return; }
+    var modal = document.getElementById('pacmanModeModal');
+    if(modal) modal.classList.remove('hidden');
+  };
+  window.hidePacmanModeSelect = function() {
+    var modal = document.getElementById('pacmanModeModal');
+    if(modal) modal.classList.add('hidden');
+  };
+  window.selectPacmanMode = function(m) {
+    pacmanSelectedMode = m;
+    var items = document.querySelectorAll('#pacmanModeModal .mode-item');
+    for(var i=0;i<items.length;i++){ items[i].classList.toggle('active', items[i].getAttribute('data-mode')===m); }
+  };
+  window.startPacmanGame = function() {
+    window.hidePacmanModeSelect();
+    window.startGame('pacman', pacmanSelectedMode || 'normal');
+  };
+
+  // v3.32：消消乐 / 数独 共用模式选择 Modal
+  const GAME_MODE_OPTIONS = {
+    match3: [
+      {mode:'time_60s', name:'限时60秒', sub:'TIME ATTACK', desc:'60 秒内尽可能拿高分'},
+      {mode:'endless', name:'无尽模式', sub:'ENDLESS', desc:'一路消除，直到无步可走'}
+    ],
+    aa_arrow: [
+      {mode:'normal', name:'标准模式', sub:'STANDARD', desc:'经典节奏，从容瞄准落针'},
+      {mode:'fast', name:'极速模式', sub:'FAST', desc:'主球高速旋转，考验反应'}
+    ]
+  };
+  let pendingGame = null, pendingMode = null;
+  window.showGameModeSelect = function(game) {
+    if(!onlineRole) return;
+    var cfg = GAME_MODE_OPTIONS[game];
+    if(!cfg) return;
+    pendingGame = game;
+    pendingMode = cfg[0].mode;
+    var titleMap = { match3:'消消乐', aa_arrow:'见缝插针' };
+    var subMap = { match3:'MATCH 3', aa_arrow:'AA ARROW' };
+    var titleEl = document.getElementById('gameModeTitle');
+    var subEl = document.getElementById('gameModeSub');
+    if(titleEl) titleEl.textContent = '选择模式';
+    if(subEl) subEl.textContent = subMap[game] || 'GAME';
+    var optWrap = document.getElementById('gameModeOptions');
+    optWrap.innerHTML = '';
+    cfg.forEach(function(o) {
+      var it = document.createElement('div');
+      it.className = 'mode-item' + (o.mode===pendingMode ? ' active' : '');
+      it.setAttribute('data-mode', o.mode);
+      it.innerHTML = '<div class="mode-info"><span class="mode-name">'+o.name+'</span><span class="mode-desc">'+o.desc+'</span></div><span class="mode-tag">'+o.sub+'</span>';
+      it.onclick = function() { window.selectGameMode(o.mode); };
+      optWrap.appendChild(it);
+    });
+    var modal = document.getElementById('gameModeModal');
+    if(modal) modal.classList.remove('hidden');
+  };
+  window.hideGameModeSelect = function() {
+    var modal = document.getElementById('gameModeModal');
+    if(modal) modal.classList.add('hidden');
+  };
+  window.selectGameMode = function(m) {
+    pendingMode = m;
+    var items = document.querySelectorAll('#gameModeModal .mode-item');
+    for(var i=0;i<items.length;i++){ items[i].classList.toggle('active', items[i].getAttribute('data-mode')===m); }
+  };
+  window.startGameModeConfirm = function() {
+    window.hideGameModeSelect();
+    if(pendingGame) window.startGame(pendingGame, pendingMode);
+  };
+  (function(){
+    var btn = document.getElementById('gameModeStartBtn');
+    if(btn) btn.onclick = window.startGameModeConfirm;
+  })();
 
   window.exitGame = function() {
     if(gameInstance) { gameInstance.destroy && gameInstance.destroy(); gameInstance = null; }
     currentGame = null;
+    document.body.classList.remove('game-active');
     document.getElementById('gameBoard').classList.remove('show');
     document.getElementById('gameHome').style.display = 'block';
     document.getElementById('gameOverOverlay').classList.remove('show');
     renderLeaderboard();
   };
 
-  function saveGameScore(game, score) {
+  function saveGameScore(game, score, mode) {
     if(!onlineRole || score <= 0) return;
-    const item={id:genId(), game:game, role:onlineRole, score:score, time:Date.now()};
+    var m = mode || 'normal';
+    // v3.31：破纪录检测——按 游戏+难度 分别统计历史最高分（不含本局）
+    var prevBest = 0;
+    gameScores.forEach(function(s){ if(s.game===game && (s.mode||'normal')===m && s.score>prevBest) prevBest = s.score; });
+    const item={id:genId(), game:game, role:onlineRole, score:score, time:Date.now(), mode:m};
     gameScores.push(item);
+    // v3.31：每次新分数立即写入 localStorage 缓存，确保刷新/断网后不丢失
+    try{ localStorage.setItem('oh_cache_game_scores', JSON.stringify(gameScores)); }catch(_e){}
     if(window.Cloud) Cloud.gameSave(item);
     renderLeaderboard();
     document.getElementById('gameOverScore').textContent = score;
     document.getElementById('gameOverOverlay').classList.add('show');
     checkAchieveRedDot();
+    // v3.31：破纪录后触发顶部 Banner 通知（本机显示 + 广播给在线对方）
+    if(score > prevBest) sendRecordNotification(onlineRole, game, score);
   }
   window.saveGameScore = saveGameScore;
 
   // ========== LEADERBOARD ==========
+  // v3.33：排行榜二级模式标签按游戏动态生成（吃豆人/消消乐/见缝插针均含难度或玩法模式）
+  const GAME_MODE_CONFIG = {
+    pacman: [{mode:'all',label:'全部'},{mode:'easy',label:'简单'},{mode:'normal',label:'中等'},{mode:'hard',label:'困难'}],
+    match3: [{mode:'all',label:'全部'},{mode:'time_60s',label:'限时60秒'},{mode:'endless',label:'无尽'}],
+    aa_arrow: [{mode:'normal',label:'标准模式'},{mode:'fast',label:'极速模式'}]
+  };
+  function buildLbModeTabs(cfg) {
+    var mt = document.getElementById('lbModeTabs');
+    if(!mt) return;
+    mt.innerHTML = '';
+    cfg.forEach(function(o) {
+      var b = document.createElement('button');
+      b.className = 'lb-mode-tab' + (o.mode===currentLbMode ? ' active' : '');
+      b.setAttribute('data-mode', o.mode);
+      b.textContent = o.label;
+      b.onclick = function() { window.switchLbMode(o.mode); };
+      mt.appendChild(b);
+    });
+  }
   window.switchLbGame = function(game) {
     currentLbGame = game;
     document.querySelectorAll('.lb-game-tab').forEach(t=>t.classList.toggle('active', t.dataset.game===game));
+    var cfg = GAME_MODE_CONFIG[game];
+    var mt = document.getElementById('lbModeTabs');
+    if(cfg && cfg.length) {
+      currentLbMode = (cfg[0].mode === 'all') ? 'all' : cfg[0].mode;
+      buildLbModeTabs(cfg);
+      if(mt) mt.style.display = 'flex';
+    } else {
+      currentLbMode = 'all';
+      if(mt) mt.style.display = 'none';
+    }
     renderLeaderboard();
   };
   window.switchLbPeriod = function(period) {
     currentLbPeriod = period;
     document.querySelectorAll('.lb-tab').forEach(t=>t.classList.toggle('active', t.dataset.period===period));
+    renderLeaderboard();
+  };
+  window.switchLbMode = function(mode) {
+    currentLbMode = mode;
+    document.querySelectorAll('.lb-mode-tab').forEach(t=>t.classList.toggle('active', t.dataset.mode===mode));
     renderLeaderboard();
   };
   window.renderLeaderboard = function() {
@@ -4251,7 +4664,7 @@ function paintStars(r){
     if(currentLbPeriod === 'day') cutoff = now - 86400000;
     else if(currentLbPeriod === 'week') cutoff = now - 604800000;
     else if(currentLbPeriod === 'month') cutoff = now - 2592000000;
-    const filtered = gameScores.filter(s => s.game === currentLbGame && s.time >= cutoff);
+    const filtered = gameScores.filter(s => s.game === currentLbGame && s.time >= cutoff && (currentLbMode === 'all' || (s.mode||'normal') === currentLbMode));
     // Keep best score per role
     const best = {};
     filtered.forEach(s => {
@@ -4259,10 +4672,13 @@ function paintStars(r){
     });
     const sorted = Object.values(best).sort((a,b)=>b.score-a.score);
     if(sorted.length === 0) { list.innerHTML = '<div class="lb-empty">～ 暂无上榜记录，快去玩一把吧 ～</div>'; return; }
+    // 模式标签按当前游戏从 GAME_MODE_CONFIG 取，避免不同游戏同名 mode 串味
     list.innerHTML = sorted.map((s,i)=>{
       const rankClass = i===0?'r1':i===1?'r2':i===2?'r3':'';
       const name = s.role==='gege'?'哥哥':'宝宝';
-      return '<div class="lb-row"><span class="lb-rank '+rankClass+'">'+(i+1)+'</span><span class="lb-name '+s.role+'">'+name+'</span><span class="lb-score">'+s.score+'</span></div>';
+      const modeCfg = (GAME_MODE_CONFIG[currentLbGame]||[]).filter(function(m){ return m.mode===s.mode; })[0];
+      const mTag = (modeCfg && s.mode!=='normal') ? '<span class="lb-mode-tag">'+modeCfg.label+'</span>' : '';
+      return '<div class="lb-row"><span class="lb-rank '+rankClass+'">'+(i+1)+'</span><span class="lb-name '+s.role+'">'+name+'</span><span class="lb-score">'+s.score+'</span>'+mTag+'</div>';
     }).join('');
   };
 
@@ -6538,7 +6954,8 @@ const ACHIEVEMENTS = [
     }
 
     let touchStartX=0, touchStartY=0;
-    function handleTouchStart(e) { touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; }
+    function handleTouchStart(e) { touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; if(e.cancelable) e.preventDefault(); }
+    function handleTouchMove(e) { if(e.cancelable) e.preventDefault(); }
     function handleTouchEnd(e) {
       const dx = e.changedTouches[0].clientX - touchStartX;
       const dy = e.changedTouches[0].clientY - touchStartY;
@@ -6548,8 +6965,9 @@ const ACHIEVEMENTS = [
     }
 
     document.addEventListener('keydown', handleKey);
-    canvas.addEventListener('touchstart', handleTouchStart, {passive:true});
-    canvas.addEventListener('touchend', handleTouchEnd, {passive:true});
+    canvas.addEventListener('touchstart', handleTouchStart, {passive:false});
+    canvas.addEventListener('touchmove', handleTouchMove, {passive:false});
+    canvas.addEventListener('touchend', handleTouchEnd, {passive:false});
 
     init();
     return {
@@ -6559,8 +6977,17 @@ const ACHIEVEMENTS = [
     };
   }
 
+  // ========== PACMAN 难度配置 ==========
+  const PACMAN_DIFFICULTY = {
+    easy:   { key:'easy',   ghostSpeed:320, ghostCount:2, frightenedTime:10000, chaseAI:false },
+    normal: { key:'normal', ghostSpeed:240, ghostCount:3, frightenedTime:6000,  chaseAI:'simple' },
+    hard:   { key:'hard',   ghostSpeed:150, ghostCount:4, frightenedTime:3000,  chaseAI:'smart' }
+  };
+
   // ========== PACMAN ==========
-  function initPacman(container) {
+  function initPacman(container, mode) {
+    const modeKey = mode || 'normal';
+    const CFG = PACMAN_DIFFICULTY[modeKey] || PACMAN_DIFFICULTY.normal;
     const cols = 15, rows = 15;
     let score = 0;
     let canvas, ctx, cellSize = 20;
@@ -6568,7 +6995,11 @@ const ACHIEVEMENTS = [
     let rafId = null;
     let lastTime = 0;
     let moveTimer = 0;
-    const moveInterval = 200;
+    let ghostTimer = 0;
+    const moveInterval = 200;            // 玩家移动间隔（固定，不随难度变化）
+    const ghostInterval = CFG.ghostSpeed; // 怪物移动间隔（随难度变化）
+    let frightenedUntil = 0;             // 能量豆 frightened 到期时间戳
+    let eatCombo = 0;                    // 本次 frightened 连击计数
 
     // 0=wall, 1=dot, 2=energy, 3=empty(corridor)
     const mapStr = [
@@ -6590,7 +7021,7 @@ const ACHIEVEMENTS = [
     ];
     let grid = mapStr.map(row => row.split('').map(Number));
 
-    const totalW = Math.min(container.offsetWidth, 300);
+    const totalW = Math.min(container.offsetWidth, 340);
     cellSize = Math.floor(totalW / cols);
     canvas = document.createElement('canvas');
     canvas.width = cols * cellSize;
@@ -6602,64 +7033,18 @@ const ACHIEVEMENTS = [
     ctx = canvas.getContext('2d');
     container.appendChild(canvas);
 
-    // 虚拟方向键
-    const dpad = document.createElement('div');
-    dpad.id = 'pacmanDpad';
-    dpad.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:12px;';
-    container.appendChild(dpad);
-
-    const btnStyle = 'width:50px;height:50px;border-radius:16px;border:none;background:rgba(255,255,255,0.7);color:#5d4e44;font-size:22px;cursor:pointer;transition:transform 0.1s;';
-
-    // 上
-    const btnUp = document.createElement('button');
-    btnUp.textContent = '';
-    btnUp.className = 'dpad-up';
-    btnUp.style.cssText = btnStyle;
-    btnUp.addEventListener('click', function(){ if(!gameOver) player.nextDir='up'; });
-    btnUp.addEventListener('touchstart', function(e){ e.preventDefault(); if(!gameOver) player.nextDir='up'; btnUp.style.transform='scale(0.9)'; }, {passive:false});
-    btnUp.addEventListener('touchend', function(){ btnUp.style.transform='scale(1)'; });
-    dpad.appendChild(btnUp);
-
-    // 中间行：左+右
-    const midRow = document.createElement('div');
-    midRow.style.cssText = 'display:flex;gap:50px;justify-content:center;';
-    dpad.appendChild(midRow);
-
-    const btnLeft = document.createElement('button');
-    btnLeft.textContent = '';
-    btnLeft.className = 'dpad-left';
-    btnLeft.style.cssText = btnStyle;
-    btnLeft.addEventListener('click', function(){ if(!gameOver) player.nextDir='left'; });
-    btnLeft.addEventListener('touchstart', function(e){ e.preventDefault(); if(!gameOver) player.nextDir='left'; btnLeft.style.transform='scale(0.9)'; }, {passive:false});
-    btnLeft.addEventListener('touchend', function(){ btnLeft.style.transform='scale(1)'; });
-    midRow.appendChild(btnLeft);
-
-    const btnRight = document.createElement('button');
-    btnRight.textContent = '';
-    btnRight.className = 'dpad-right';
-    btnRight.style.cssText = btnStyle;
-    btnRight.addEventListener('click', function(){ if(!gameOver) player.nextDir='right'; });
-    btnRight.addEventListener('touchstart', function(e){ e.preventDefault(); if(!gameOver) player.nextDir='right'; btnRight.style.transform='scale(0.9)'; }, {passive:false});
-    btnRight.addEventListener('touchend', function(){ btnRight.style.transform='scale(1)'; });
-    midRow.appendChild(btnRight);
-
-    // 下
-    const btnDown = document.createElement('button');
-    btnDown.textContent = '';
-    btnDown.className = 'dpad-down';
-    btnDown.style.cssText = btnStyle;
-    btnDown.addEventListener('click', function(){ if(!gameOver) player.nextDir='down'; });
-    btnDown.addEventListener('touchstart', function(e){ e.preventDefault(); if(!gameOver) player.nextDir='down'; btnDown.style.transform='scale(0.9)'; }, {passive:false});
-    btnDown.addEventListener('touchend', function(){ btnDown.style.transform='scale(1)'; });
-    dpad.appendChild(btnDown);
+    // v3.31：已删除底部虚拟方向键（▲◄►▼），吃豆人改为直接在画布上滑动手指控制方向，操作更接近原生 App
 
     // Player
     let player = { x: 7, y: 7, dir: null, nextDir: null };
-    // Enemies
-    let enemies = [
-      { x: 5, y: 7, dir: 'left', color: '#e57373' },
-      { x: 9, y: 7, dir: 'right', color: '#f48fb1' },
-    ];
+    // Enemies（按难度生成数量，出生点用中央 3x3 通道区避免卡墙）
+    const GHOST_HOMES = [ {x:6,y:6}, {x:8,y:6}, {x:6,y:8}, {x:8,y:8} ];
+    const GHOST_COLORS = ['#e57373', '#f48fb1', '#90caf9', '#a5d6a7'];
+    let enemies = [];
+    for (let gi = 0; gi < CFG.ghostCount; gi++) {
+      const h = GHOST_HOMES[gi % GHOST_HOMES.length];
+      enemies.push({ x:h.x, y:h.y, dir:'left', color:GHOST_COLORS[gi % GHOST_COLORS.length], homeX:h.x, homeY:h.y, frightened:false });
+    }
     let totalDots = 0;
     let dotsEaten = 0;
 
@@ -6725,7 +7110,14 @@ const ACHIEVEMENTS = [
 
       // Enemies
       enemies.forEach(e => {
-        ctx.fillStyle = e.color;
+        let _ec = e.color;
+        if (e.frightened) {
+          const _rem = frightenedUntil - Date.now();
+          // 最后 1.5 秒闪烁提示即将恢复
+          if (_rem < 1500 && Math.floor(Date.now() / 200) % 2 === 0) _ec = '#fff';
+          else _ec = '#5c6bc0';
+        }
+        ctx.fillStyle = _ec;
         ctx.beginPath();
         ctx.arc(
           e.x * cellSize + cellSize / 2,
@@ -6766,8 +7158,23 @@ const ACHIEVEMENTS = [
       document.getElementById('gameScoreDisplay').textContent = '分数: ' + score;
     }
 
-    function step() {
-      // Player movement
+    function oppositeDir(d) { return { left:'right', right:'left', up:'down', down:'up' }[d]; }
+
+    // 在合法方向里按到玩家的曼哈顿距离择优（toward=true 靠近 / false 远离）
+    function pickDir(e, options, toward) {
+      const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+      let best = options[0];
+      let bestDist = Math.abs(e.x + dirs[options[0]][0] - player.x) + Math.abs(e.y + dirs[options[0]][1] - player.y);
+      if (!toward) bestDist = -bestDist;
+      for (let i = 1; i < options.length; i++) {
+        const d = options[i];
+        const dist = Math.abs(e.x + dirs[d][0] - player.x) + Math.abs(e.y + dirs[d][1] - player.y);
+        if (toward ? dist < bestDist : dist > bestDist) { bestDist = dist; best = d; }
+      }
+      return best;
+    }
+
+    function stepPlayer() {
       if (player.nextDir) {
         const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
         const [dx, dy] = dirs[player.nextDir];
@@ -6783,7 +7190,6 @@ const ACHIEVEMENTS = [
         if (canMove(nx, ny)) {
           player.x = nx;
           player.y = ny;
-          // Eat dot
           if (grid[ny][nx] === 1) {
             grid[ny][nx] = 3;
             score += 10;
@@ -6794,37 +7200,67 @@ const ACHIEVEMENTS = [
             score += 50;
             dotsEaten++;
             updateScore();
+            // 点燃 frightened：所有怪物变可吃，持续 CFG.frightenedTime
+            frightenedUntil = Date.now() + CFG.frightenedTime;
+            eatCombo = 0;
+            enemies.forEach(function(e){ e.frightened = true; });
           }
         }
       }
+    }
 
-      // Enemy movement
-      enemies.forEach(e => {
-        const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
-        const [dx, dy] = dirs[e.dir];
-        const nx = e.x + dx, ny = e.y + dy;
-        if (canMove(nx, ny)) {
-          e.x = nx;
-          e.y = ny;
+    function stepEnemies() {
+      const dirs = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+      enemies.forEach(function(e) {
+        const options = ['left','right','up','down'].filter(function(d) {
+          const dd = dirs[d]; return canMove(e.x + dd[0], e.y + dd[1]);
+        });
+        if (options.length === 0) return;
+        let chosen;
+        if (e.frightened) {
+          // 逃离玩家
+          chosen = pickDir(e, options, false);
+        } else if (CFG.chaseAI === 'smart') {
+          const nr = options.filter(function(d){ return !e.dir || oppositeDir(d) !== e.dir; });
+          chosen = pickDir(e, nr.length ? nr : options, true);
+        } else if (CFG.chaseAI === 'simple') {
+          if (Math.random() < 0.7) {
+            const nr = options.filter(function(d){ return !e.dir || oppositeDir(d) !== e.dir; });
+            chosen = pickDir(e, nr.length ? nr : options, true);
+          } else {
+            chosen = options[Math.floor(Math.random() * options.length)];
+          }
         } else {
-          // Random direction
-          const allDirs = ['left', 'right', 'up', 'down'];
-          e.dir = allDirs[Math.floor(Math.random() * 4)];
+          // easy：纯随机游走
+          chosen = options[Math.floor(Math.random() * options.length)];
         }
+        e.dir = chosen;
+        const dd = dirs[chosen];
+        e.x += dd[0];
+        e.y += dd[1];
       });
+    }
 
-      // Check collision with enemies
-      enemies.forEach(e => {
-        if (Math.abs(e.x - player.x) < 1 && Math.abs(e.y - player.y) < 1) {
-          gameOver = true;
-          saveGameScore('pacman', score);
+    function checkCollision() {
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (e.x === player.x && e.y === player.y) {
+          if (e.frightened) {
+            // 吃掉 frightened 怪物：连击加分并归位
+            eatCombo++;
+            score += 200 * eatCombo;
+            updateScore();
+            e.x = e.homeX; e.y = e.homeY; e.frightened = false;
+          } else {
+            gameOver = true;
+            saveGameScore('pacman', score, modeKey);
+            return;
+          }
         }
-      });
-
-      // Check win
+      }
       if (dotsEaten >= totalDots) {
         gameOver = true;
-        saveGameScore('pacman', score + 100);
+        saveGameScore('pacman', score + 100, modeKey);
       }
     }
 
@@ -6834,9 +7270,15 @@ const ACHIEVEMENTS = [
       const dt = time - lastTime;
       lastTime = time;
       moveTimer += dt;
-      if (moveTimer >= moveInterval) {
-        step();
-        moveTimer = 0;
+      ghostTimer += dt;
+      let playerMoved = false, ghostMoved = false;
+      if (moveTimer >= moveInterval) { stepPlayer(); moveTimer = 0; playerMoved = true; }
+      if (ghostTimer >= ghostInterval) { stepEnemies(); ghostTimer = 0; ghostMoved = true; }
+      // frightened 过期恢复普通状态
+      if (frightenedUntil && Date.now() > frightenedUntil) { enemies.forEach(function(e){ e.frightened = false; }); frightenedUntil = 0; }
+      // frightened 期间每帧重绘以实现闪烁；其余仅在发生移动时重绘
+      if (playerMoved || ghostMoved || frightenedUntil) {
+        checkCollision();
         draw();
       }
       rafId = requestAnimationFrame(loop);
@@ -6859,6 +7301,10 @@ const ACHIEVEMENTS = [
     function handleTouchStart(e) {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      if (e.cancelable) e.preventDefault();
+    }
+    function handleTouchMove(e) {
+      if (e.cancelable) e.preventDefault();
     }
     function handleTouchEnd(e) {
       if (gameOver) return;
@@ -6873,8 +7319,9 @@ const ACHIEVEMENTS = [
     }
 
     document.addEventListener('keydown', handleKey);
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: true });
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
     draw();
     updateScore();
@@ -7142,6 +7589,342 @@ const ACHIEVEMENTS = [
       destroy() {
         gameOver = true;
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      }
+    };
+  }
+
+
+  // v3.32：消消乐 Match-3
+  function initMatch3(container, mode) {
+    const SIZE = 8;
+    const COLORS = ['#e8a0a0', '#a3c9a8', '#a3b8e0', '#e6cf9a', '#c9a3e0', '#9ad6cf'];
+    const modeKey = mode || 'time_60s';
+    let board = [];
+    let selected = null;
+    let score = 0;
+    let gameOver = false;
+    let timer = null;
+    let timeLeft = 60;
+    let busy = false;
+    let downInfo = null;
+
+    function rand() { return Math.floor(Math.random() * COLORS.length); }
+    function swap(r1, c1, r2, c2) { const t = board[r1][c1]; board[r1][c1] = board[r2][c2]; board[r2][c2] = t; }
+
+    function findMatches() {
+      const mark = [];
+      for (let r = 0; r < SIZE; r++) mark[r] = new Array(SIZE).fill(false);
+      for (let r = 0; r < SIZE; r++) {
+        let run = 1;
+        for (let c = 1; c <= SIZE; c++) {
+          if (c < SIZE && board[r][c] !== -1 && board[r][c] === board[r][c - 1]) run++;
+          else { if (run >= 3) for (let k = c - run; k < c; k++) mark[r][k] = true; run = 1; }
+        }
+      }
+      for (let c = 0; c < SIZE; c++) {
+        let run = 1;
+        for (let r = 1; r <= SIZE; r++) {
+          if (r < SIZE && board[r][c] !== -1 && board[r][c] === board[r - 1][c]) run++;
+          else { if (run >= 3) for (let k = r - run; k < r; k++) mark[k][c] = true; run = 1; }
+        }
+      }
+      const matched = [];
+      for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) if (mark[r][c]) matched.push({r:r, c:c});
+      return matched;
+    }
+
+    function hasValidMove() {
+      for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+        if (c + 1 < SIZE) { swap(r, c, r, c + 1); const ok = findMatches().length > 0; swap(r, c, r, c + 1); if (ok) return true; }
+        if (r + 1 < SIZE) { swap(r, c, r + 1, c); const ok = findMatches().length > 0; swap(r, c, r + 1, c); if (ok) return true; }
+      }
+      return false;
+    }
+
+    function applyGravity() {
+      for (let c = 0; c < SIZE; c++) {
+        const col = [];
+        for (let r = SIZE - 1; r >= 0; r--) if (board[r][c] !== -1) col.push(board[r][c]);
+        for (let r = SIZE - 1; r >= 0; r--) {
+          if (col.length) board[r][c] = col.shift();
+          else board[r][c] = rand();
+        }
+      }
+    }
+
+    function resolve() {
+      let chain = 0;
+      let matches = findMatches();
+      while (matches.length) {
+        chain++;
+        score += matches.length * 10 * chain;
+        matches.forEach(function(p) { board[p.r][p.c] = -1; });
+        applyGravity();
+        matches = findMatches();
+      }
+      updateScore();
+    }
+
+    function reshuffleUntilValid() {
+      const flat = [];
+      for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) flat.push(board[r][c]);
+      for (let tries = 0; tries < 60; tries++) {
+        for (let i = flat.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = flat[i]; flat[i] = flat[j]; flat[j] = t; }
+        let k = 0;
+        for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) board[r][c] = flat[k++];
+        let ms = findMatches();
+        while (ms.length) { ms.forEach(function(p) { board[p.r][p.c] = rand(); }); ms = findMatches(); }
+        if (hasValidMove()) return true;
+      }
+      return hasValidMove();
+    }
+
+    function createBoard() {
+      board = [];
+      for (let r = 0; r < SIZE; r++) { board[r] = []; for (let c = 0; c < SIZE; c++) board[r][c] = rand(); }
+      let ms = findMatches();
+      while (ms.length) { ms.forEach(function(p) { board[p.r][p.c] = rand(); }); ms = findMatches(); }
+      if (!hasValidMove()) reshuffleUntilValid();
+    }
+
+    function updateScore() {
+      const el = document.getElementById('gameScoreDisplay');
+      if (el) el.textContent = '分数: ' + score;
+      const sEl = container.querySelector('.m3-score');
+      if (sEl) sEl.textContent = '分数 ' + score;
+    }
+    function updateTimer() {
+      const tEl = container.querySelector('.m3-timer');
+      if (tEl) tEl.textContent = (modeKey === 'time_60s') ? ('时间 ' + timeLeft + 's') : '无尽模式';
+    }
+    function startTimer() {
+      if (modeKey !== 'time_60s') return;
+      timeLeft = 60;
+      updateTimer();
+      timer = setInterval(function() {
+        if (gameOver) { clearInterval(timer); timer = null; return; }
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+    }
+    function endGame() {
+      if (gameOver) return;
+      gameOver = true;
+      if (timer) { clearInterval(timer); timer = null; }
+      const ot = document.getElementById('gameOverText');
+      if (ot) ot.textContent = (modeKey === 'time_60s') ? '时间到' : '本局结束';
+      saveGameScore('match3', score, modeKey);
+    }
+
+    function onPointerDown(e) {
+      const cell = e.currentTarget;
+      downInfo = { r: +cell.dataset.r, c: +cell.dataset.c, x: e.clientX, y: e.clientY };
+    }
+    function onPointerUp(e) {
+      if (!downInfo || busy || gameOver) { downInfo = null; return; }
+      const dx = e.clientX - downInfo.x;
+      const dy = e.clientY - downInfo.y;
+      const r = downInfo.r, c = downInfo.c;
+      if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+        let tr = r, tc = c;
+        if (Math.abs(dx) > Math.abs(dy)) tc += dx > 0 ? 1 : -1; else tr += dy > 0 ? 1 : -1;
+        downInfo = null;
+        if (tr >= 0 && tr < SIZE && tc >= 0 && tc < SIZE) trySwap(r, c, tr, tc);
+        return;
+      }
+      if (!selected) { selected = {r:r, c:c}; render(); }
+      else if (selected.r === r && selected.c === c) { selected = null; render(); }
+      else if (Math.abs(selected.r - r) + Math.abs(selected.c - c) === 1) {
+        const sr = selected.r, sc = selected.c; selected = null; trySwap(sr, sc, r, c);
+      } else { selected = {r:r, c:c}; render(); }
+      downInfo = null;
+    }
+
+    function trySwap(r1, c1, r2, c2) {
+      if (busy || gameOver) return;
+      if (Math.abs(r1 - r2) + Math.abs(c1 - c2) !== 1) return;
+      busy = true;
+      swap(r1, c1, r2, c2);
+      if (findMatches().length > 0) {
+        selected = null;
+        resolve();
+        if (!hasValidMove() && !reshuffleUntilValid()) {
+          render(); busy = false; endGame(); return;
+        }
+        render();
+      } else {
+        swap(r1, c1, r2, c2);
+        render();
+      }
+      busy = false;
+    }
+
+    function render() {
+      container.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'm3-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'm3-bar';
+      const timerEl = document.createElement('div');
+      timerEl.className = 'm3-timer';
+      const scoreEl = document.createElement('div');
+      scoreEl.className = 'm3-score';
+      scoreEl.textContent = '分数 ' + score;
+      bar.appendChild(timerEl);
+      bar.appendChild(scoreEl);
+      if (modeKey === 'endless') {
+        const endBtn = document.createElement('button');
+        endBtn.className = 'm3-end-btn';
+        endBtn.textContent = '结束计分';
+        endBtn.onclick = function() { endGame(); };
+        bar.appendChild(endBtn);
+      }
+      wrap.appendChild(bar);
+      const grid = document.createElement('div');
+      grid.className = 'm3-grid';
+      grid.style.gridTemplateColumns = 'repeat(' + SIZE + ', 1fr)';
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'm3-cell';
+          cell.style.background = COLORS[board[r][c]];
+          cell.dataset.r = r; cell.dataset.c = c;
+          if (selected && selected.r === r && selected.c === c) cell.classList.add('sel');
+          cell.addEventListener('pointerdown', onPointerDown);
+          cell.addEventListener('pointerup', onPointerUp);
+          grid.appendChild(cell);
+        }
+      }
+      wrap.appendChild(grid);
+      container.appendChild(wrap);
+      updateTimer();
+      updateScore();
+    }
+
+    createBoard();
+    render();
+    updateScore();
+    startTimer();
+
+    return {
+      destroy() {
+        gameOver = true;
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+    };
+  }
+
+
+  // v3.33：见缝插针 AA Arrow（Canvas 实现；点按屏幕发射针，针相撞即结束）
+  function initAAArrow(container, mode) {
+    const modeKey = mode || 'normal';
+    const W = 300, H = 380, centerX = 150, centerY = 130, ballRadius = 35, pinLen = 65, headR = 6;
+    let canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = '320px';
+    canvas.style.height = 'auto';
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
+    canvas.style.borderRadius = '12px';
+    canvas.style.background = '#fff';
+    canvas.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)';
+    canvas.style.touchAction = 'none';
+    container.appendChild(canvas);
+    const tip = document.createElement('div');
+    tip.className = 'aa-tip';
+    tip.textContent = '点击屏幕，把针扎进旋转的主球';
+    container.appendChild(tip);
+    const ctx = canvas.getContext('2d');
+
+    let score = 0;
+    let rotation = 0;
+    let pins = [0, Math.PI / 2, Math.PI];
+    let gameOver = false;
+    let raf = null;
+    const speed = (modeKey === 'fast') ? 0.04 : 0.02;
+
+    function norm(a) { a = a % (Math.PI * 2); if (a < 0) a += Math.PI * 2; return a; }
+    function setScore() { const el = document.getElementById('gameScoreDisplay'); if (el) el.textContent = '分数: ' + score; }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotation);
+      ctx.beginPath();
+      ctx.arc(0, 0, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#6E4A52';
+      ctx.fill();
+      pins.forEach(function(angle) {
+        ctx.save();
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, ballRadius);
+        ctx.lineTo(0, ballRadius + pinLen);
+        ctx.strokeStyle = '#6E4A52';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, ballRadius + pinLen + 5, headR, 0, Math.PI * 2);
+        ctx.fillStyle = '#D9777F';
+        ctx.fill();
+        ctx.restore();
+      });
+      ctx.restore();
+      // 准备发射的针（主球正下方）
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY + ballRadius + pinLen);
+      ctx.lineTo(centerX, 330);
+      ctx.strokeStyle = '#6E4A52';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(centerX, 335, headR, 0, Math.PI * 2);
+      ctx.fillStyle = '#D9777F';
+      ctx.fill();
+    }
+
+    function loop() {
+      if (gameOver) return;
+      rotation = norm(rotation + speed);
+      draw();
+      raf = requestAnimationFrame(loop);
+    }
+
+    function shoot() {
+      if (gameOver) return;
+      // 新针插入主球“正下方”对应的局部角度 = -rotation（旋转后回到世界向下方向）
+      const insert = norm(-rotation);
+      const hit = pins.some(function(angle) {
+        let diff = Math.abs(norm(angle) - insert);
+        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+        return diff < 0.15;
+      });
+      if (hit) {
+        gameOver = true;
+        if (raf) cancelAnimationFrame(raf);
+        setScore();
+        const ot = document.getElementById('gameOverText');
+        if (ot) ot.textContent = '游戏结束';
+        saveGameScore('aa_arrow', score, modeKey);
+      } else {
+        pins.push(insert);
+        score += 1;
+        setScore();
+        draw();
+      }
+    }
+
+    canvas.addEventListener('pointerdown', function(e) { e.preventDefault(); shoot(); }, { passive: false });
+    setScore();
+    loop();
+
+    return {
+      destroy() {
+        gameOver = true;
+        if (raf) cancelAnimationFrame(raf);
       }
     };
   }
