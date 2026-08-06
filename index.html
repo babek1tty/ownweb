@@ -570,7 +570,8 @@
   .film-tab:active{ transform:scale(0.98); }
   .film-tab-label{ display:block; font-size:14px; color:var(--text); margin-bottom:6px; }
   .film-tab-count{ display:inline-block; min-width:22px; padding:2px 7px; background:var(--accent); color:#7a5c3a; font-size:13px; border-radius:11px; }
-  .film-float-add{ position:fixed; right:18px; bottom:92px; border:none; background:var(--accent); color:#7a5c3a; font-family:var(--font-zh); font-size:15px; padding:12px 20px; border-radius:24px; box-shadow:0 6px 18px rgba(93,78,68,0.15); cursor:pointer; z-index:10; }
+  .film-float-add{ position:fixed; right:18px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0) + 16px); border:none; background:linear-gradient(135deg,#F3C6C6 0%,#EBA8A8 100%); color:#fff; font-family:var(--font-zh); font-size:15px; font-weight:600; padding:13px 22px; border-radius:26px; box-shadow:0 8px 22px rgba(214,140,140,0.35); cursor:pointer; z-index:210; letter-spacing:1px; transition:transform .12s; }
+  .film-float-add:active{ transform:scale(0.95); }
   /* v3.30.9：家庭电影主页「添加电影 / 添加电视剧」横向双按钮组 */
   .film-float-add-group{ position:fixed; right:18px; bottom:92px; display:flex; gap:10px; z-index:10; }
   .film-float-add-group .film-float-add{ position:static; }
@@ -2660,7 +2661,7 @@ window.switchSpace=function(){
           <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
         </div>
         <div class="film-list" id="movie-list-want"></div>
-        <button class="film-float-add" onclick="openFilmAddFromList('want')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('want')">+ 添加影片</button>
       </div>
       <!-- 家庭电影-在看 -->
       <div id="study-movie-watching" style="display:none">
@@ -2672,7 +2673,7 @@ window.switchSpace=function(){
           <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
         </div>
         <div class="film-list" id="movie-list-watching"></div>
-        <button class="film-float-add" onclick="openFilmAddFromList('watching')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watching')">+ 添加影片</button>
       </div>
       <!-- 家庭电影-已看 -->
       <div id="study-movie-watched" style="display:none">
@@ -2684,7 +2685,7 @@ window.switchSpace=function(){
           <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
         </div>
         <div class="film-list" id="movie-list-watched"></div>
-        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加影片</button>
       </div>
       <!-- 家庭电影-共同观看 -->
       <div id="study-movie-both" style="display:none">
@@ -2696,7 +2697,7 @@ window.switchSpace=function(){
           <button class="film-kind-tab" data-kind="tv" onclick="setFilmKindFilter('movie','tv')">电视剧</button>
         </div>
         <div class="film-list" id="movie-list-both"></div>
-        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmAddFromList('watched')">+ 添加影片</button>
       </div>
 
       <!-- 豹窝藏书主页面 -->
@@ -2710,35 +2711,35 @@ window.switchSpace=function(){
           <input type="search" class="film-search-input" placeholder="搜索书名…" oninput="filterFilmMain('book',this.value)">
         </div>
         <div class="film-tabs" id="bookTabs"></div>
-        <button class="film-float-add" onclick="openFilmModal('book','want')">+ 添加图书</button>
+        <button class="film-float-add" onclick="openFilmModal('book','want')">+ 新增图书</button>
       </div>
       <!-- 豹窝藏书-想看 -->
       <div id="study-book-want" style="display:none">
         <button class="back-btn" onclick="closeFilmList('book','want')">&#8249; 返回豹窝藏书</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon" data-icon="书">书</span>想看</div><div class="page-subtitle">待看的书单</div></div>
         <div class="film-list" id="book-list-want"></div>
-        <button class="film-float-add" onclick="openFilmModal('book','want')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmModal('book','want')">+ 添加图书</button>
       </div>
       <!-- 豹窝藏书-在看 -->
       <div id="study-book-watching" style="display:none">
         <button class="back-btn" onclick="closeFilmList('book','watching')">&#8249; 返回豹窝藏书</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon" data-icon="书">书</span>在看</div><div class="page-subtitle">正在读的书</div></div>
         <div class="film-list" id="book-list-watching"></div>
-        <button class="film-float-add" onclick="openFilmModal('book','watching')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmModal('book','watching')">+ 添加图书</button>
       </div>
       <!-- 豹窝藏书-已看 -->
       <div id="study-book-watched" style="display:none">
         <button class="back-btn" onclick="closeFilmList('book','watched')">&#8249; 返回豹窝藏书</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon" data-icon="书">书</span>已看</div><div class="page-subtitle">一个人先读完了</div></div>
         <div class="film-list" id="book-list-watched"></div>
-        <button class="film-float-add" onclick="openFilmModal('book','watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmModal('book','watched')">+ 添加图书</button>
       </div>
       <!-- 豹窝藏书-共同观看 -->
       <div id="study-book-both" style="display:none">
         <button class="back-btn" onclick="closeFilmList('book','both')">&#8249; 返回豹窝藏书</button>
         <div class="page-header"><div class="page-title"><span class="page-title-icon" data-icon="书">书</span>共同阅读</div><div class="page-subtitle">我们一起读完了</div></div>
         <div class="film-list" id="book-list-both"></div>
-        <button class="film-float-add" onclick="openFilmModal('book','watched')">+ 添加</button>
+        <button class="film-float-add" onclick="openFilmModal('book','watched')">+ 添加图书</button>
       </div>
     </div>
   </main>
