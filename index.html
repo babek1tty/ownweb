@@ -518,6 +518,9 @@
   .film-card-status-pill.watched{background:rgba(233,198,168,0.25);color:#7a5c3a}
   .film-card-status-pill.both{background:rgba(249,199,79,0.2);color:#7a5c18}
   .film-card-note { font-family:var(--font-zh); font-size:12px; color:var(--text-sub); margin-top:2px; }
+  /* v3.31：卡片内按用户分别展示「感想」，与「评价」共用同一视觉样式 */
+  .film-card-user-note { margin-top:6px; }
+  .film-card-user-note .review-by { color:#C080A0; }
   .film-card-time { font-family:var(--font-en); font-size:11px; color:var(--text-sub); margin-top:6px; opacity:0.85; }
 
   /* 电影/图书条目左滑 */
@@ -577,6 +580,12 @@
   .film-float-add-group .film-float-add{ position:static; }
   .film-float-add-tv{ background:#bcd3e6; color:#3f6f93; }
   .film-float-add-tv:active{ transform:scale(0.97); }
+  /* v3.31：影视/图书弹窗「公共基础信息」与「我的记录」两大区块分区样式 */
+  .form-section{ margin-top:6px; }
+  .section-title{ font-size:13px; font-weight:600; color:#9E8287; margin:6px 0 14px; letter-spacing:0.5px; }
+  .form-divider{ height:1px; background:#F0D5D8; margin:18px 0; border:none; }
+  .user-section{ background:rgba(252,232,236,0.3); padding:14px; border-radius:16px; border:1px solid #F3D9DD; margin-top:4px; }
+  .user-section .section-title{ color:#C080A0; }
   /* v3.30.9：想看/在看/已看/共同观看 列表的 全部/电影/电视剧 筛选 */
   .film-kind-tabs{ display:flex; gap:8px; margin:0 0 14px; background:#fff5ee; padding:5px; border-radius:14px; box-shadow:var(--shadow); }
   .film-kind-tab{ flex:1; border:none; background:transparent; font-family:var(--font-zh); font-size:14px; color:var(--text-sub); padding:9px 0; border-radius:10px; cursor:pointer; transition:all .15s; }
@@ -1983,7 +1992,7 @@ const Cloud=(function(){
   async function gameSave(g){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('game_scores',{space_id:spaceId,id:String(g.id),game:g.game,role:g.role,score:g.score,time:g.time,mode:g.mode||'normal'},[['space_id',spaceId],['id',String(g.id)]]); if(error){console.error('Cloud gameSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniAdd(a){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('anniversaries',{space_id:spaceId,id:String(a.id),title:a.title,date:a.date,type:a.type},[['space_id',spaceId],['id',String(a.id)]]); if(error){console.error('Cloud anniAdd 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function anniDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('anniversaries').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud anniDelete 失败:',error.message); }
-  async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:(kind==='book')?(item.publisher||null):(item.duration||null),country:item.country||null,gege:item.gege||{status:null,rating:0},baobao:item.baobao||{status:null,rating:0},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
+  async function mediaSave(item,kind){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('media',{space_id:spaceId,id:String(item.id),kind:kind,title:item.title||'',year:item.year||'',genre:item.genre||'',note:item.note||'',poster:item.poster||null,cover:item.cover||null,director:item.director||null,cast_crew:item.cast||null,author:item.author||null,publisher:(kind==='book')?(item.publisher||null):(item.duration||null),country:item.country||null,gege:(item.gege&&typeof item.gege==='object')?{status:item.gege.status||null,rating:item.gege.rating||0,review:item.gege.review||'',note:item.gege.note||''}:{status:null,rating:0,review:'',note:''},baobao:(item.baobao&&typeof item.baobao==='object')?{status:item.baobao.status||null,rating:item.baobao.rating||0,review:item.baobao.review||'',note:item.baobao.note||''}:{status:null,rating:0,review:'',note:''},time:item.time||''},[['space_id',spaceId],['id',String(item.id)]]); if(error){console.error('Cloud mediaSave 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
   async function mediaDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('media').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud mediaDelete 失败:',error.message); }
   async function ctrlSave(r){ if(!await ensureReady()||!spaceId||!r)return; const d=new Date(r.startTime); const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); const error=await upsertSafe('ctrl_records',{space_id:spaceId,id:String(r.id),role:r.role,start_time:r.startTime,end_time:r.endTime,duration:r.duration,is_offline:!!r.isOffline,log_date:ds},[['space_id',spaceId],['id',String(r.id)]]); if(error)console.error('Cloud ctrlSave 失败:',error.message); }
   async function ctrlDelete(id){ if(!await ensureReady()||!spaceId)return; if(!isUUID(String(id)))return; const {error}=await sb.from('ctrl_records').delete().eq('space_id',spaceId).eq('id',String(id)); if(error)console.error('Cloud ctrlDelete 失败:',error.message); }
@@ -2831,74 +2840,87 @@ window.switchSpace=function(){
       <div class="modal-label" id="filmNameLabel">名称</div>
       <input type="text" class="modal-input" id="filmTitleInp" placeholder="片名 / 书名">
     </div>
-    <!-- 电影专属：导演 -->
-    <div class="modal-row film-field" id="filmDirectorRow">
-      <div class="modal-label">导演</div>
-      <input type="text" class="modal-input" id="filmDirectorInp" placeholder="导演名称">
-    </div>
-    <!-- 电影专属：演员主创 -->
-    <div class="modal-row film-field" id="filmCastRow">
-      <div class="modal-label">演员 / 主创</div>
-      <input type="text" class="modal-input" id="filmCastInp" placeholder="主要演员">
-    </div>
-    <!-- 片长（电影）/ 集数（电视剧）：电影与电视剧共用此行，标签随类型切换 -->
-    <div class="modal-row film-field" id="filmDurationRow">
-      <div class="modal-label" id="filmDurationLabel">片长</div>
-      <input type="text" class="modal-input" id="filmDurationInp" placeholder="如 120分钟" maxlength="20">
-    </div>
-    <!-- 图书专属：作者 -->
-    <div class="modal-row book-field" id="filmAuthorRow">
-      <div class="modal-label">作者</div>
-      <input type="text" class="modal-input" id="filmAuthorInp" placeholder="作者名称">
-    </div>
-    <!-- 图书专属：出版社 -->
-    <div class="modal-row book-field" id="filmPublisherRow">
-      <div class="modal-label">出版社</div>
-      <input type="text" class="modal-input" id="filmPublisherInp" placeholder="出版社">
-    </div>
-    <!-- 年份 -->
-    <div class="modal-row">
-      <div class="modal-label">年份</div>
-      <input type="text" class="modal-input" id="filmYearInp" placeholder="如 2024" maxlength="10">
-    </div>
-    <!-- 类型 -->
-    <div class="modal-row">
-      <div class="modal-label">类型</div>
-      <input type="text" class="modal-input" id="filmGenreInp" placeholder="如 剧情 / 奇幻 / 小说">
-    </div>
-    <!-- 电影专属：国家 -->
-    <div class="modal-row film-field" id="filmCountryRow">
-      <div class="modal-label">国家 / 地区</div>
-      <input type="text" class="modal-input" id="filmCountryInp" placeholder="如 中国 / 美国">
-    </div>
-    <!-- 感想 -->
-    <div class="modal-row">
-      <div class="modal-label">感想</div>
-      <input type="text" class="modal-input" id="filmNoteInp" placeholder="一句话感想…">
-    </div>
-    <!-- 状态选择：pill 按钮 -->
-    <div class="modal-row">
-      <div class="modal-label">我的状态</div>
-      <div class="status-pills" id="filmStatusPills">
-        <button class="status-pill" data-status="want" onclick="selectFilmStatus('want')">想看</button>
-        <button class="status-pill" data-status="watching" onclick="selectFilmStatus('watching')">在看</button>
-        <button class="status-pill" data-status="watched" onclick="selectFilmStatus('watched')">已看</button>
-        <button class="status-pill" data-status="both" id="filmBothPill" onclick="selectFilmStatus('both')">共同已看</button>
+
+    <!-- Block 1: 公共基础信息（作品本身的属性，双方共享同一份） -->
+    <div class="form-section">
+      <div class="section-title">基础信息</div>
+      <!-- 电影专属：导演 -->
+      <div class="modal-row film-field" id="filmDirectorRow">
+        <div class="modal-label">导演</div>
+        <input type="text" class="modal-input" id="filmDirectorInp" placeholder="导演名称">
+      </div>
+      <!-- 电影专属：演员主创 -->
+      <div class="modal-row film-field" id="filmCastRow">
+        <div class="modal-label">演员 / 主创</div>
+        <input type="text" class="modal-input" id="filmCastInp" placeholder="主要演员">
+      </div>
+      <!-- 片长（电影）/ 集数（电视剧）：电影与电视剧共用此行，标签随类型切换 -->
+      <div class="modal-row film-field" id="filmDurationRow">
+        <div class="modal-label" id="filmDurationLabel">片长</div>
+        <input type="text" class="modal-input" id="filmDurationInp" placeholder="如 120分钟" maxlength="20">
+      </div>
+      <!-- 图书专属：作者 -->
+      <div class="modal-row book-field" id="filmAuthorRow">
+        <div class="modal-label">作者</div>
+        <input type="text" class="modal-input" id="filmAuthorInp" placeholder="作者名称">
+      </div>
+      <!-- 图书专属：出版社 -->
+      <div class="modal-row book-field" id="filmPublisherRow">
+        <div class="modal-label">出版社</div>
+        <input type="text" class="modal-input" id="filmPublisherInp" placeholder="出版社">
+      </div>
+      <!-- 年份 -->
+      <div class="modal-row">
+        <div class="modal-label">年份</div>
+        <input type="text" class="modal-input" id="filmYearInp" placeholder="如 2024" maxlength="10">
+      </div>
+      <!-- 类型 -->
+      <div class="modal-row">
+        <div class="modal-label">类型</div>
+        <input type="text" class="modal-input" id="filmGenreInp" placeholder="如 剧情 / 奇幻 / 小说">
+      </div>
+      <!-- 电影专属：国家 -->
+      <div class="modal-row film-field" id="filmCountryRow">
+        <div class="modal-label">国家 / 地区</div>
+        <input type="text" class="modal-input" id="filmCountryInp" placeholder="如 中国 / 美国">
       </div>
     </div>
-    <!-- 评分星星 -->
-    <div class="modal-row" id="filmRatingRow">
-      <div class="modal-label">我的评分</div>
-      <div class="film-star-row">
-        <div class="star-input" id="filmStars"></div>
-        <span class="star-score" id="filmScoreTxt">未评分</span>
+
+    <hr class="form-divider">
+
+    <!-- Block 2: 我的记录（绑定当前用户/设备，独立存储痕迹，不覆盖对方） -->
+    <div class="form-section user-section">
+      <div class="section-title">我的记录</div>
+      <!-- 我的状态 -->
+      <div class="modal-row">
+        <div class="modal-label">我的状态</div>
+        <div class="status-pills" id="filmStatusPills">
+          <button class="status-pill" data-status="want" onclick="selectFilmStatus('want')">想看</button>
+          <button class="status-pill" data-status="watching" onclick="selectFilmStatus('watching')">在看</button>
+          <button class="status-pill" data-status="watched" onclick="selectFilmStatus('watched')">已看</button>
+          <button class="status-pill" data-status="both" id="filmBothPill" onclick="selectFilmStatus('both')">共同已看</button>
+        </div>
+      </div>
+      <!-- 我的评分 -->
+      <div class="modal-row" id="filmRatingRow">
+        <div class="modal-label">我的评分</div>
+        <div class="film-star-row">
+          <div class="star-input" id="filmStars"></div>
+          <span class="star-score" id="filmScoreTxt">未评分</span>
+        </div>
+      </div>
+      <!-- 我的感想（一句话短评，分用户隔离） -->
+      <div class="modal-row">
+        <div class="modal-label">我的感想（一句话短评）</div>
+        <input type="text" class="modal-input" id="filmNoteInp" placeholder="如：叙事温和非常有情怀…">
+      </div>
+      <!-- 我的评价 -->
+      <div class="modal-row">
+        <div class="modal-label">我的评价（可选）</div>
+        <textarea class="modal-textarea" id="filmReviewInp" placeholder="写下你的影评 / 感受，可留空；对方也能看到"></textarea>
       </div>
     </div>
-    <!-- 我的评价 -->
-    <div class="modal-row">
-      <div class="modal-label">我的评价（可选）</div>
-      <textarea class="modal-textarea" id="filmReviewInp" placeholder="写下你的影评 / 感受，可留空；对方也能看到"></textarea>
-    </div>
+
     <!-- 保存按钮 -->
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeFilmModal()">取消</button>
@@ -3047,7 +3069,7 @@ window.switchSpace=function(){
     var _kind = x.kind || 'movie';
     // v3.30.9：片长/集数无独立列，movie/tv 复用 publisher 列持久化；内存统一用 duration 字段
     var _duration = (_kind==='book') ? '' : (x.duration || x.publisher || '');
-    return {id:x.id, title:x.title, year:x.year, genre:x.genre, note:x.note, poster:x.poster, cover:x.cover, director:x.director, cast:x.cast_crew, author:x.author, publisher:x.publisher, country:x.country, kind:_kind, duration:_duration, gege:{status:g.status||null, rating:g.rating||0, review:g.review||''}, baobao:{status:b.status||null, rating:b.rating||0, review:b.review||''}, time:x.time};
+    return {id:x.id, title:x.title, year:x.year, genre:x.genre, note:x.note, poster:x.poster, cover:x.cover, director:x.director, cast:x.cast_crew, author:x.author, publisher:x.publisher, country:x.country, kind:_kind, duration:_duration, gege:{status:g.status||null, rating:g.rating||0, review:g.review||'', note:g.note||x.note||''}, baobao:{status:b.status||null, rating:b.rating||0, review:b.review||'', note:b.note||x.note||''}, time:x.time};
   }
 
   // 实时回调：某表在云端发生变更后，拉取该表最新数据并刷新对应界面
@@ -3803,7 +3825,7 @@ function paintStars(r){
       document.getElementById('filmCoverInp').value = (filmKind==='book') ? (item.cover||'') : (item.poster||'');
       document.getElementById('filmYearInp').value = item.year || '';
       document.getElementById('filmGenreInp').value = item.genre || '';
-      document.getElementById('filmNoteInp').value = item.note || '';
+      document.getElementById('filmNoteInp').value = (item[onlineRole] && item[onlineRole].note) || '';
       document.getElementById('filmReviewInp').value = (item[onlineRole] && item[onlineRole].review) || '';
       document.getElementById('filmDurationInp').value = (filmKind!=='book') ? (item.duration||'') : '';
       if(filmKind!=='book'){
@@ -3867,7 +3889,6 @@ function paintStars(r){
       var item = findFilm(filmType, editingFilmId);
       if(!item) return;
       item.title = title || item.title;
-      item.note = note;
       item.year = year;
       item.genre = genre;
       if(filmKind!=='book'){
@@ -3882,20 +3903,20 @@ function paintStars(r){
         item.publisher = document.getElementById('filmPublisherInp').value.trim();
       }
       if(status==='both'){
-        // 共同观看：记录当前用户的评分/评价，并把对方也标记为已看；保留对方已有的评分/评价，不强行覆盖
-        item[onlineRole] = {status:'watched', rating: rating, review: review};
+        // 共同观看：记录当前用户的评分/评价/感想，并把对方也标记为已看；保留对方已有的评分/评价/感想，不强行覆盖
+        item[onlineRole] = {status:'watched', rating: rating, review: review, note: note};
         var _other = onlineRole==='gege' ? 'baobao' : 'gege';
-        var _o = item[_other] || {status:null, rating:0, review:''};
-        if(_o.status !== 'watched') item[_other] = {status:'watched', rating:_o.rating||0, review:_o.review||''};
+        var _o = item[_other] || {status:null, rating:0, review:'', note:''};
+        if(_o.status !== 'watched') item[_other] = {status:'watched', rating:_o.rating||0, review:_o.review||'', note:_o.note||''};
       } else {
-        item[onlineRole] = {status:status, rating:rating, review: review};
+        item[onlineRole] = {status:status, rating:rating, review: review, note: note};
       }
     } else {
       if(!title) return;
       var item = {
-        id:Date.now(), title:title, year:year, genre:genre, note:note, time:filmTime(),
+        id:Date.now(), title:title, year:year, genre:genre, time:filmTime(),
         kind:filmKind, duration:(filmKind!=='book')?duration:'',
-        gege:{status:null,rating:0,review:''}, baobao:{status:null,rating:0,review:''}
+        gege:{status:null,rating:0,review:'',note:''}, baobao:{status:null,rating:0,review:'',note:''}
       };
       if(filmKind!=='book'){
         item.poster = coverUrl;
@@ -3909,13 +3930,13 @@ function paintStars(r){
         item.publisher = document.getElementById('filmPublisherInp').value.trim();
       }
       if(status==='both'){
-        // 共同观看：记录当前用户的评分/评价，并把对方也标记为已看；保留对方已有的评分/评价，不强行覆盖
-        item[onlineRole] = {status:'watched', rating: rating, review: review};
+        // 共同观看：记录当前用户的评分/评价/感想，并把对方也标记为已看；保留对方已有的评分/评价/感想，不强行覆盖
+        item[onlineRole] = {status:'watched', rating: rating, review: review, note: note};
         var _other = onlineRole==='gege' ? 'baobao' : 'gege';
-        var _o = item[_other] || {status:null, rating:0, review:''};
-        if(_o.status !== 'watched') item[_other] = {status:'watched', rating:_o.rating||0, review:_o.review||''};
+        var _o = item[_other] || {status:null, rating:0, review:'', note:''};
+        if(_o.status !== 'watched') item[_other] = {status:'watched', rating:_o.rating||0, review:_o.review||'', note:_o.note||''};
       } else {
-        item[onlineRole] = {status:status, rating:rating, review: review};
+        item[onlineRole] = {status:status, rating:rating, review: review, note: note};
       }
       if(filmKind==='tv') tvs.unshift(item);
       else if(filmKind==='movie') movies.unshift(item);
@@ -4058,13 +4079,12 @@ function paintStars(r){
         if(p.rating) statusHtml += starStatic(p.rating);
         statusHtml += '</div>';
         if(p.review) statusHtml += '<div class="film-card-user-review"><span class="review-by">评价：</span>'+esc(p.review)+'</div>';
+        if(p.note) statusHtml += '<div class="film-card-user-review film-card-user-note"><span class="review-by">感想：</span>'+esc(p.note)+'</div>';
         statusHtml += '</div>';
       });
       statusHtml += '</div>';
       // 首次添加时间（实时记录，第一次添加时写入），作为卡片底部独立一行
       var timeHtml = d.time ? '<div class="film-card-time">添加于 '+esc(d.time)+'</div>' : '';
-      // Note
-      var noteHtml = d.note ? '<div class="film-card-note">'+esc(d.note)+'</div>' : '';
       var html = '<div class="film-swipe-wrap" data-id="'+d.id+'" data-type="'+type+'">';
       html += '<div class="film-swipe-actions">';
       html += '<button class="film-swipe-edit-btn" onclick="event.stopPropagation();openFilmModal(\''+type+'\',null,'+d.id+',\''+d.kind+'\')">编辑</button>';
@@ -4076,7 +4096,6 @@ function paintStars(r){
       html += '<div class="film-card-title">'+esc(d.title)+yearHtml+'</div>';
       html += metaHtml;
       html += statusHtml;
-      html += noteHtml;
       html += timeHtml;
       html += '</div>';
       html += '</div>';
