@@ -586,6 +586,12 @@
   .form-divider{ height:1px; background:#F0D5D8; margin:18px 0; border:none; }
   .user-section{ background:rgba(252,232,236,0.3); padding:14px; border-radius:16px; border:1px solid #F3D9DD; margin-top:4px; }
   .user-section .section-title{ color:#C080A0; }
+  /* v3.31：影视/图书弹窗快捷标签云（类型/国家/导演） */
+  .tag-cloud{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; max-height:100px; overflow-y:auto; padding:2px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .tag-cloud::-webkit-scrollbar{ display:none; }
+  .quick-tag-chip{ font-size:11px; color:#7E656B; background:#FAF3F4; border:1px solid #F0D5D8; padding:3px 10px; border-radius:12px; cursor:pointer; user-select:none; transition:all 0.15s ease; font-family:var(--font-zh); line-height:1.4; white-space:nowrap; }
+  .quick-tag-chip:active{ transform:scale(0.94); background:#E8CFD3; }
+  .quick-tag-chip.active{ background:#E8CFD3; color:#5E3D45; font-weight:600; border-color:#E0BEC3; }
   /* v3.30.9：想看/在看/已看/共同观看 列表的 全部/电影/电视剧 筛选 */
   .film-kind-tabs{ display:flex; gap:8px; margin:0 0 14px; background:#fff5ee; padding:5px; border-radius:14px; box-shadow:var(--shadow); }
   .film-kind-tab{ flex:1; border:none; background:transparent; font-family:var(--font-zh); font-size:14px; color:var(--text-sub); padding:9px 0; border-radius:10px; cursor:pointer; transition:all .15s; }
@@ -916,6 +922,34 @@
     transition:background 0.15s;
   }
   .btn-close-capsule:active { background:#DFBEC4; }
+
+  /* v3.34：自定义确认弹窗（替代原生 confirm） */
+  .custom-modal-overlay {
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    background:rgba(0,0,0,0.35); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:99999; opacity:0; pointer-events:none; transition:opacity .25s ease;
+    padding:20px;
+  }
+  .custom-modal-overlay.active { opacity:1; pointer-events:auto; }
+  .custom-modal-card {
+    width:82%; max-width:320px;
+    background:#FFFDF9; border-radius:20px; padding:22px 20px 18px;
+    box-shadow:0 10px 25px rgba(126,101,107,0.18); border:1px solid #F3E2E5;
+    text-align:center; transform:scale(0.9); transition:transform .25s ease;
+  }
+  .custom-modal-overlay.active .custom-modal-card { transform:scale(1); }
+  .custom-modal-title { font-size:16px; font-weight:600; color:#6C4C53; margin-bottom:8px; font-family:var(--font-zh); }
+  .custom-modal-body { font-size:13px; color:#8C7378; line-height:1.5; margin-bottom:20px; font-family:var(--font-zh); }
+  .custom-modal-actions { display:flex; gap:12px; }
+  .custom-modal-actions button {
+    flex:1; padding:9px 0; border-radius:25px; font-size:13px; font-weight:500;
+    border:none; cursor:pointer; transition:all .2s ease; font-family:var(--font-zh);
+  }
+  .btn-modal-cancel { background:#F5EAEB; color:#7E656B; }
+  .btn-modal-cancel:active { background:#EADADB; }
+  .btn-modal-danger { background:#D8818A; color:#FFFFFF; }
+  .btn-modal-danger:active { background:#C66E77; }
 
   /* Wish Tree */
   .wish-tree-area {
@@ -2009,7 +2043,7 @@ const Cloud=(function(){
       withTimeout(sb.from('mistakes').select().eq('space_id',spaceId).range(0,999999)),
       withTimeout(sb.from('grudges').select().eq('space_id',spaceId).range(0,999999)),
       withTimeout(sb.from('game_scores').select().eq('space_id',spaceId).range(0,999999)),
-      withTimeout(sb.from('media').select().eq('space_id',spaceId).range(0,999999)),
+      withTimeout(sb.from('media').select().eq('space_id',spaceId).order('time',{ascending:false}).range(0,999999)),
       withTimeout(sb.from('ctrl_records').select().eq('space_id',spaceId).range(0,999999))
     ];
     var results = await Promise.allSettled(queries);
@@ -2078,6 +2112,7 @@ const Cloud=(function(){
     try{
       let q = sb.from(name).select().eq('space_id', spaceId);
       if(name==='messages') q = q.order('created_at', {ascending:false});
+      if(name==='media') q = q.order('time', {ascending:false});
       // v3.30.7：突破 PostgREST 默认 1000 行上限，避免实时回写时整体覆盖本地数组导致旧记录"消失"
       q = q.range(0, 999999);
       const { data, error } = await q;
@@ -2904,6 +2939,7 @@ window.switchSpace=function(){
       <div class="modal-row film-field" id="filmDirectorRow">
         <div class="modal-label">导演</div>
         <input type="text" class="modal-input" id="filmDirectorInp" placeholder="导演名称">
+        <div class="tag-cloud" id="directorTagCloud"></div>
       </div>
       <!-- 电影专属：演员主创 -->
       <div class="modal-row film-field" id="filmCastRow">
@@ -2913,7 +2949,7 @@ window.switchSpace=function(){
       <!-- 片长（电影）/ 集数（电视剧）：电影与电视剧共用此行，标签随类型切换 -->
       <div class="modal-row film-field" id="filmDurationRow">
         <div class="modal-label" id="filmDurationLabel">片长</div>
-        <input type="text" class="modal-input" id="filmDurationInp" placeholder="如 120分钟" maxlength="20">
+        <input type="text" class="modal-input" id="filmDurationInp" placeholder="如 146" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
       </div>
       <!-- 图书专属：作者 -->
       <div class="modal-row book-field" id="filmAuthorRow">
@@ -2934,11 +2970,13 @@ window.switchSpace=function(){
       <div class="modal-row">
         <div class="modal-label">类型</div>
         <input type="text" class="modal-input" id="filmGenreInp" placeholder="如 剧情 / 奇幻 / 小说">
+        <div class="tag-cloud" id="genreTagCloud"></div>
       </div>
       <!-- 电影专属：国家 -->
       <div class="modal-row film-field" id="filmCountryRow">
         <div class="modal-label">国家 / 地区</div>
         <input type="text" class="modal-input" id="filmCountryInp" placeholder="如 中国 / 美国">
+        <div class="tag-cloud" id="regionTagCloud"></div>
       </div>
     </div>
 
@@ -3850,6 +3888,64 @@ function paintStars(r){
     });
   }
   var editingFilmId = null;
+  // v3.31：影视/图书弹窗快捷标签云（类型/国家/导演）
+  // v3.32：合并补充标签（细分类型/产地/国内外导演），已去重，仅追加未出现的项
+  var MORE_TAGS = {
+    genres: ['青春','武侠','灾难','运动','音乐','西部','儿童','黑色电影','脱口秀','真人秀','舞台艺术'],
+    regions: ['印度','泰国','俄罗斯','瑞典','丹麦','爱尔兰','巴西','墨西哥','波兰','伊朗','新西兰','新加坡'],
+    directors: ['贝托鲁奇','徐克','宁浩','许鞍华','文牧野','郭帆','毕赣','曹保平','程耳','魏书钧','关锦鹏','马丁·斯科塞斯','詹姆斯·卡梅隆','蒂姆·伯顿','阿尔弗雷德·希区柯克','斯坦利·库布里克','盖·里奇','岩井俊二','今敏','朴赞郁','李沧东','吕克·贝松','大卫·林奇']
+  };
+  function mergeTags(base, extra){
+    var seen = {}, out = [];
+    base.concat(extra).forEach(function(t){ if(!seen[t]){ seen[t]=1; out.push(t); } });
+    return out;
+  }
+  var QUICK_TAGS = {
+    genres: mergeTags(['剧情','喜剧','爱情','科幻','悬疑','惊悚','恐怖','犯罪','动作','冒险','奇幻','动画','战争','历史','传记','家庭','纪录片','短片','同性','歌舞'], MORE_TAGS.genres),
+    regions: mergeTags(['中国大陆','中国香港','中国台湾','美国','日本','韩国','英国','法国','德国','意大利','西班牙','加拿大','澳大利亚'], MORE_TAGS.regions),
+    directors: mergeTags(['李安','王家卫','张艺谋','陈凯歌','贾樟柯','姜文','周星驰','杜琪峰','杨德昌','侯孝贤','辛爽','娄烨','克里斯托弗·诺兰','史蒂芬·斯皮尔伯格','昆汀·塔伦蒂诺','宫崎骏','新海诚','是枝裕和','奉俊昊','阿方索·卡隆','大卫·芬奇','韦斯·安德森'], MORE_TAGS.directors)
+  };
+  function renderTagCloud(containerId, tagList, inputId, isSingle){
+    var container = document.getElementById(containerId);
+    var inputEl = document.getElementById(inputId);
+    if(!container || !inputEl) return;
+    container.innerHTML = '';
+    tagList.forEach(function(tagText){
+      var chip = document.createElement('span');
+      chip.className = 'quick-tag-chip';
+      chip.textContent = tagText;
+      chip.addEventListener('click', function(){
+        var currentVal = (inputEl.value||'').trim();
+        if(isSingle){
+          inputEl.value = tagText;
+          container.querySelectorAll('.quick-tag-chip').forEach(function(c){ c.classList.remove('active'); });
+          chip.classList.add('active');
+        } else{
+          var arr = currentVal ? currentVal.split(/\s+/) : [];
+          var idx = arr.indexOf(tagText);
+          if(idx > -1){ arr.splice(idx,1); chip.classList.remove('active'); }
+          else{ arr.push(tagText); chip.classList.add('active'); }
+          inputEl.value = arr.join(' ');
+        }
+      });
+      container.appendChild(chip);
+    });
+    // 监听手动输入，同步高亮
+    inputEl._tagListener = function(){
+      var val = (inputEl.value||'').trim();
+      var selected = val ? val.split(/\s+/) : [];
+      container.querySelectorAll('.quick-tag-chip').forEach(function(chip){
+        if(selected.indexOf(chip.textContent) > -1) chip.classList.add('active'); else chip.classList.remove('active');
+      });
+    };
+    inputEl.removeEventListener('input', inputEl._tagListener);
+    inputEl.addEventListener('input', inputEl._tagListener);
+  }
+  window.initQuickTags = function(){
+    renderTagCloud('genreTagCloud', QUICK_TAGS.genres, 'filmGenreInp', false);
+    renderTagCloud('regionTagCloud', QUICK_TAGS.regions, 'filmCountryInp', false);
+    renderTagCloud('directorTagCloud', QUICK_TAGS.directors, 'filmDirectorInp', true);
+  };
   // v3.30.9：openFilmModal 增加 kind 参数（movie/tv/book）；TV 走电影类字段，仅片长集数不同
   window.openFilmModal = function(type,status,id,kind){
     filmType=type;
@@ -3885,7 +3981,7 @@ function paintStars(r){
       document.getElementById('filmGenreInp').value = item.genre || '';
       document.getElementById('filmNoteInp').value = (item[onlineRole] && item[onlineRole].note) || '';
       document.getElementById('filmReviewInp').value = (item[onlineRole] && item[onlineRole].review) || '';
-      document.getElementById('filmDurationInp').value = (filmKind!=='book') ? (item.duration||'') : '';
+      document.getElementById('filmDurationInp').value = (filmKind!=='book') ? ((item.duration||'').replace(/[^\d]/g,'')) : '';
       if(filmKind!=='book'){
         document.getElementById('filmDirectorInp').value = item.director || '';
         document.getElementById('filmCastInp').value = item.cast || '';
@@ -3913,6 +4009,7 @@ function paintStars(r){
     onFilmStatusChange();
     document.getElementById('filmScoreTxt').textContent = filmRating ? (filmRating*2).toFixed(1)+' 分' : '未评分';
     modal.classList.add('show');
+    if(typeof initQuickTags==='function') initQuickTags();
   };
   window.closeFilmModal = function(){
     document.getElementById('filmModal').classList.remove('show');
@@ -3940,7 +4037,7 @@ function paintStars(r){
     var coverUrl=document.getElementById('filmCoverInp').value.trim();
     var year=document.getElementById('filmYearInp').value.trim();
     var genre=document.getElementById('filmGenreInp').value.trim();
-    var duration=document.getElementById('filmDurationInp').value.trim();
+    var duration=document.getElementById('filmDurationInp').value.replace(/[^\d]/g,'');
     var status=filmStatus;
     var rating = (status==='watched'||status==='both') ? filmRating : 0;
     if(editingFilmId){
@@ -4004,6 +4101,7 @@ function paintStars(r){
     closeFilmModal();
     refreshFilmViews(filmType);
   };
+  // v3.35：影视/图书删除（与纪念日删除同一模式：直接删本地 + 云端同步，无弹窗）
   window.delFilm = function(id){
     [movies,books,tvs].forEach(function(arr){
       var i=arr.findIndex(function(x){ return x && String(x.id)===String(id); });
@@ -4097,6 +4195,8 @@ function paintStars(r){
       }
       return getFilmCategory(d)===status;
     });
+    // v3.35：按添加时间倒序排列（最新在前），前端兜底排序
+    items.sort(function(a,b){ var ta=(a.time||''), tb=(b.time||''); if(ta>tb) return -1; if(ta<tb) return 1; return 0; });
     var box = document.getElementById(type+'-list-'+status);
     if(!box) return;
     if(items.length===0){ var __em = q ? '没有找到匹配的影片哦～' : '还没有记录，今晚一起看一部吧～'; box.innerHTML='<div class="film-empty"><div class="film-empty-illu"><svg width="110" height="96" viewBox="0 0 110 96" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="22" y="26" width="66" height="46" rx="8" stroke="#C9B8A4" stroke-width="3" stroke-dasharray="6 5"/><rect x="29" y="33" width="52" height="32" rx="4" fill="#F7EFE4"/><circle cx="37" cy="49" r="4.5" fill="#E2D3C1"/><circle cx="73" cy="49" r="4.5" fill="#E2D3C1"/><circle cx="55" cy="49" r="4.5" fill="#E2D3C1"/><path d="M40 70 q15 11 30 0" stroke="#C9B8A4" stroke-width="3" stroke-linecap="round"/><path d="M48 62 l4 4 8 -9" stroke="#D9A7A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="film-empty-text">'+__em+'</div></div>'; return; }
@@ -4114,7 +4214,7 @@ function paintStars(r){
         if(d.director) metaParts.push(esc(d.director));
         if(d.genre) metaParts.push(esc(d.genre));
         if(d.country) metaParts.push(esc(d.country));
-        if(d.duration) metaParts.push((d.kind==='tv'?'集数 ':'片长 ')+esc(d.duration));
+        if(d.duration) { var durNum=(d.duration||'').replace(/[^\d]/g,''); if(durNum) metaParts.push((d.kind==='tv'?'集数 ':'片长 ')+durNum+(d.kind==='tv'?'集':'分钟')); }
       } else {
         if(d.author) metaParts.push(esc(d.author));
         if(d.publisher) metaParts.push(esc(d.publisher));
@@ -8418,5 +8518,16 @@ const ACHIEVEMENTS = [
   checkAchieveRedDot();
 })();
 </script>
+<!-- v3.34：自定义确认弹窗（替代原生 confirm） -->
+<div id="customConfirmModal" class="custom-modal-overlay">
+  <div class="custom-modal-card">
+    <div class="custom-modal-title" id="confirmModalTitle">确认删除</div>
+    <div class="custom-modal-body" id="confirmModalBody">确定要彻底删除这条记录吗？云端数据也将同步清空。</div>
+    <div class="custom-modal-actions">
+      <button class="btn-modal-cancel" id="confirmModalCancel">取消</button>
+      <button class="btn-modal-danger" id="confirmModalOk">确定删除</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
