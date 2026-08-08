@@ -875,6 +875,47 @@
     font-family:var(--font-zh); font-size:14px; line-height:1.7; color:var(--text);
     white-space:pre-wrap; word-break:break-word;
   }
+  /* 时光胶囊：解封弹窗（仪式感）与「可拆封」按钮手感 */
+  .capsule-card.can-open { cursor:pointer; }
+  .capsule-card.can-open:active { transform:scale(0.98); }
+  .tag-openable { cursor:pointer; background:#EAF3EC !important; color:#4D7A57 !important; border:1px solid #C8E3CF; box-shadow:0 2px 4px rgba(77,122,87,0.1); }
+  .capsule-modal-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(110,74,82,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;
+    transition:opacity 0.3s ease;
+  }
+  .capsule-modal-overlay.hidden { opacity:0; pointer-events:none; }
+  .capsule-modal-card {
+    background:#FFFDFD; border:1px solid #F3D9DD; border-radius:24px;
+    width:100%; max-width:320px; padding:24px 20px; text-align:center;
+    box-shadow:0 12px 32px rgba(180,120,130,0.2);
+    animation:capsulePop 0.3s cubic-bezier(0.18,0.89,0.32,1.28);
+  }
+  @keyframes capsulePop { 0%{transform:scale(0.85);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+  .capsule-badge {
+    font-family:var(--font-en); font-size:10px; letter-spacing:1.5px;
+    color:#B26A74; background:#F8ECEF; display:inline-block;
+    padding:3px 10px; border-radius:8px; margin-bottom:12px;
+  }
+  .capsule-modal-header { font-size:16px; color:#6E4A52; font-weight:600; font-family:var(--font-zh); }
+  .capsule-modal-header .author-tag {
+    display:inline-block; padding:2px 10px; border-radius:10px; margin-right:4px;
+    background:#F8ECEF; color:#B26A74; font-weight:600;
+  }
+  .capsule-date { font-family:var(--font-en); font-size:11px; color:#A0858A; margin:4px 0 16px 0; }
+  .capsule-content-box {
+    background:#FAF4F5; border:1px dashed #E6C2C7; border-radius:16px;
+    padding:16px; font-size:14px; line-height:1.6; color:#5E3D45;
+    text-align:left; max-height:200px; overflow-y:auto; margin-bottom:20px;
+    white-space:pre-wrap; word-break:break-word; font-family:var(--font-zh);
+  }
+  .btn-close-capsule {
+    width:100%; height:42px; background:#E8CFD3; border:none; border-radius:16px;
+    color:#5E3D45; font-size:14px; font-weight:600; cursor:pointer; font-family:var(--font-zh);
+    transition:background 0.15s;
+  }
+  .btn-close-capsule:active { background:#DFBEC4; }
 
   /* Wish Tree */
   .wish-tree-area {
@@ -1979,7 +2020,7 @@ const Cloud=(function(){
       else { out[k]=[]; failed++; console.warn('Cloud loadAll 表 '+k+' 加载失败:', r.status==='rejected'?r.reason:(r.value&&r.value.error)||'unknown'); }
     });
     if(failed>0) console.warn('Cloud loadAll 共 '+failed+'/'+keys.length+' 张表加载异常（已降级为空，不影响其他表）');
-    return{moods:out.moods||[],caps:out.caps||[],msgs:out.msgs||[],ach:out.ach||[],anns:out.anns||[],wishes:out.wishes||[],mistakes:out.mst||[],grudges:out.grd||[],games:out.gm||[],media:out.med||[],ctrls:out.cr||[]};
+    return{moods:out.moods||[],caps:out.caps||[],msgs:out.msgs||[],ach:out.ach||[],anns:out.anns||[],wishes:out.wsh||[],mistakes:out.mst||[],grudges:out.grd||[],games:out.gm||[],media:out.med||[],ctrls:out.cr||[]};
   }
   // v3.30.4：还原 saveMood（此前被误删），心情按 (space_id,date,role) 唯一，每人每天一条
   async function saveMood(date,r,mk){ if(!await ensureReady()||!spaceId)return _done({ok:false,error:'云端未就绪，稍候重试'}); const error=await upsertSafe('moods',{space_id:spaceId,date:date,role:r,mood_key:mk},[['space_id',spaceId],['date',date],['role',r]]); if(error){console.error('Cloud saveMood 失败:',error.message);return _done({ok:false,error:error.message});} return _done({ok:true}); }
@@ -2774,6 +2815,21 @@ window.switchSpace=function(){
   </div>
 </div>
 
+<!-- 时光胶囊：解封内容展示弹窗 -->
+<div id="capsuleModal" class="capsule-modal-overlay hidden" onclick="if(event.target===this)closeCapsuleModal()">
+  <div class="capsule-modal-card">
+    <div class="capsule-badge">CAPSULE UNLOCKED</div>
+    <div class="capsule-modal-header">
+      <span id="capsuleAuthor" class="author-tag">宝宝</span> 的时光胶囊
+    </div>
+    <div class="capsule-date" id="capsuleLockDate">封存时间：</div>
+    <div class="capsule-content-box">
+      <p id="capsuleMessage">胶囊内容加载中…</p>
+    </div>
+    <button class="btn-close-capsule" onclick="closeCapsuleModal()">收到啦</button>
+  </div>
+</div>
+
 <!-- 纪念日弹窗 -->
 <div class="modal-overlay" id="anniModal">
   <div class="modal">
@@ -3373,7 +3429,9 @@ window.switchSpace=function(){
             ctrlRecords = cloudCtrls;
           }
           ctrlRenderRecords();
-          renderCalendar(); renderCapsules(); renderMessages(); if(typeof renderAnniversaries==='function') renderAnniversaries(); if(typeof refreshFilmViews==='function') refreshFilmViews(filmType); checkAchieveRedDot();
+          renderCalendar(); renderCapsules(); renderMessages(); if(typeof renderAnniversaries==='function') renderAnniversaries(); if(typeof refreshFilmViews==='function') refreshFilmViews(filmType); if(typeof renderWishes==='function') renderWishes(); if(typeof renderMistakes==='function') renderMistakes(); if(typeof renderGrudges==='function') renderGrudges(); checkAchieveRedDot();
+          // v3.31 兜底：延迟再刷一次许愿柳/记仇本/错题本，防止打开页面时 loadAll 尚未返回导致空状态
+          setTimeout(function(){ if(typeof renderWishes==='function') renderWishes(); if(typeof renderMistakes==='function') renderMistakes(); if(typeof renderGrudges==='function') renderGrudges(); }, 600);
         }catch(e){ console.error('Cloud load err', e); }
       }).catch(function(e){
         console.error('Cloud loadAll 整体异常:', e);
@@ -3658,7 +3716,7 @@ window.switchSpace=function(){
     document.getElementById('brother-home').style.display = 'none';
     document.getElementById('brother-'+section).style.display = 'block';
     if(section === 'mistake') renderMistakes();
-    if(section === 'wish') renderWishes();
+    if(section === 'wish') { renderWishes(); /* 兜底：若 loadAll 尚未返回，数据到后会再刷一次（见 loadAll .then 里的 renderWishes） */ }
     if(section === 'ctrl') { ctrlUpdateCurrentDisplay(); ctrlRenderRecords(); if(onlineRole==='gege'){ ctrlPageOpenCount++; checkAchieveRedDot(); } }
     document.getElementById('mainContent').scrollTop = 0;
   };
@@ -4421,10 +4479,13 @@ function paintStars(r){
       const diff = Math.ceil((open - now) / 86400000);
       const isReady = diff <= 0;
       const writerName = c.role==='gege'?'哥哥':'宝宝';
-      const preview = c.opened ? c.text : (isReady ? '点击拆封查看' : '封存中...到时间才能看');
-      const countdownHtml = c.opened ? '<span class="capsule-opened">已拆封</span>' : (isReady ? '<span class="capsule-countdown ready">可拆封</span>' : '<span class="capsule-countdown">剩 '+diff+' 天</span>');
-      const contentHtml = c.opened ? '<div class="capsule-content">'+c.text+'</div>' : '';
-      return `<div class="capsule-card" onclick="${isReady && !c.opened ? 'openCapsule('+c.id+')' : ''}">
+      // 到时间后整张卡片可点拆封；已拆封的也可轻触重温
+      const tag = c.opened
+        ? '<span class="capsule-opened">已拆封 · 点击重温</span>'
+        : (isReady ? '<span class="capsule-countdown ready tag-openable">可拆封</span>' : '<span class="capsule-countdown">剩 '+diff+' 天</span>');
+      const preview = c.opened ? '已经拆封的时光信件，轻触可重温' : (isReady ? '点击拆封查看' : '封存中…到时间才能看');
+      const click = isReady ? ("showCapsuleModal('"+c.id+"')") : '';
+      return `<div class="capsule-card ${isReady ? 'can-open' : 'locked'}" onclick="${click}">
         <div class="capsule-envelope">
           <div class="capsule-seal">封</div>
         </div>
@@ -4433,16 +4494,29 @@ function paintStars(r){
             <span class="capsule-writer ${c.role}">${writerName}</span>
             <span class="capsule-time">${c.writeTime}</span>
           </div>
-          <div class="capsule-preview">${c.opened ? c.text : preview}</div>
-          ${countdownHtml}
-          ${contentHtml}
+          <div class="capsule-preview">${preview}</div>
+          ${tag}
         </div>
       </div>`;
     }).join('');
   };
-  window.openCapsule = function(id) {
-    const c = capsules.find(x=>x.id===id);
-    if(c){ c.opened = true; if(window.Cloud) Cloud.openCapsule(c.id); renderCapsules(); checkAchieveRedDot(); }
+  // 时光胶囊：点击拆封 -> 标记已拆封（首次）-> 弹出解封弹窗展示内容
+  window.showCapsuleModal = function(id) {
+    const c = capsules.find(x=>String(x.id)===String(id));
+    if(!c) return;
+    if(!c.opened){
+      c.opened = true;
+      if(window.Cloud) Cloud.openCapsule(c.id);
+      checkAchieveRedDot();
+    }
+    document.getElementById('capsuleAuthor').textContent = (c.role==='gege'?'哥哥':'宝宝');
+    document.getElementById('capsuleLockDate').textContent = '封存时间：' + (c.openDate||'');
+    document.getElementById('capsuleMessage').textContent = c.text || '';
+    document.getElementById('capsuleModal').classList.remove('hidden');
+  };
+  window.closeCapsuleModal = function() {
+    document.getElementById('capsuleModal').classList.add('hidden');
+    renderCapsules();
   };
 
   // ========== WISH TREE ==========
